@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen } from 'lucide-react';
+import { BarChart3, BookOpen, Database } from 'lucide-react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { getCurrentlyReadingFromDB, getRecentlyReadPaginatedFromDB, transformDBBookToBookInfo } from '@/lib/database-queries';
 import { useEffect, useRef } from 'react';
@@ -133,6 +133,12 @@ function Books() {
             <Link to="/books/analytics">
               <BarChart3 className="h-4 w-4" />
               Reading Analytics
+            </Link>
+          </Button>
+          <Button asChild variant="outline" className="flex items-center gap-2">
+            <Link to="/books/explore">
+              <Database className="h-4 w-4" />
+              Explore Database
             </Link>
           </Button>
         </div>

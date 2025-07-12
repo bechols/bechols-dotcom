@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './app/index'
 import { Route as BooksIndexRouteImport } from './app/books/index'
 import { Route as AboutIndexRouteImport } from './app/about/index'
 import { Route as BooksWantToReadRouteImport } from './app/books/want-to-read'
+import { Route as BooksExploreRouteImport } from './app/books/explore'
 import { Route as BooksAnalyticsRouteImport } from './app/books/analytics'
 import { Route as AboutUserManualRouteImport } from './app/about/user-manual'
 import { Route as AboutHowIGotIntoPmRouteImport } from './app/about/how-i-got-into-pm'
@@ -49,6 +50,11 @@ const BooksWantToReadRoute = BooksWantToReadRouteImport.update({
   path: '/books/want-to-read',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BooksExploreRoute = BooksExploreRouteImport.update({
+  id: '/books/explore',
+  path: '/books/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BooksAnalyticsRoute = BooksAnalyticsRouteImport.update({
   id: '/books/analytics',
   path: '/books/analytics',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/about/how-i-got-into-pm': typeof AboutHowIGotIntoPmRoute
   '/about/user-manual': typeof AboutUserManualRoute
   '/books/analytics': typeof BooksAnalyticsRoute
+  '/books/explore': typeof BooksExploreRoute
   '/books/want-to-read': typeof BooksWantToReadRoute
   '/about/': typeof AboutIndexRoute
   '/books': typeof BooksIndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/about/how-i-got-into-pm': typeof AboutHowIGotIntoPmRoute
   '/about/user-manual': typeof AboutUserManualRoute
   '/books/analytics': typeof BooksAnalyticsRoute
+  '/books/explore': typeof BooksExploreRoute
   '/books/want-to-read': typeof BooksWantToReadRoute
   '/about': typeof AboutIndexRoute
   '/books': typeof BooksIndexRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/about/how-i-got-into-pm': typeof AboutHowIGotIntoPmRoute
   '/about/user-manual': typeof AboutUserManualRoute
   '/books/analytics': typeof BooksAnalyticsRoute
+  '/books/explore': typeof BooksExploreRoute
   '/books/want-to-read': typeof BooksWantToReadRoute
   '/about/': typeof AboutIndexRoute
   '/books/': typeof BooksIndexRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/about/how-i-got-into-pm'
     | '/about/user-manual'
     | '/books/analytics'
+    | '/books/explore'
     | '/books/want-to-read'
     | '/about/'
     | '/books'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/about/how-i-got-into-pm'
     | '/about/user-manual'
     | '/books/analytics'
+    | '/books/explore'
     | '/books/want-to-read'
     | '/about'
     | '/books'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/about/how-i-got-into-pm'
     | '/about/user-manual'
     | '/books/analytics'
+    | '/books/explore'
     | '/books/want-to-read'
     | '/about/'
     | '/books/'
@@ -138,6 +150,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRouteWithChildren
   InterestingRoute: typeof InterestingRoute
   BooksAnalyticsRoute: typeof BooksAnalyticsRoute
+  BooksExploreRoute: typeof BooksExploreRoute
   BooksWantToReadRoute: typeof BooksWantToReadRoute
   BooksIndexRoute: typeof BooksIndexRoute
 }
@@ -186,6 +199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BooksWantToReadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/books/explore': {
+      id: '/books/explore'
+      path: '/books/explore'
+      fullPath: '/books/explore'
+      preLoaderRoute: typeof BooksExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/books/analytics': {
       id: '/books/analytics'
       path: '/books/analytics'
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRouteWithChildren,
   InterestingRoute: InterestingRoute,
   BooksAnalyticsRoute: BooksAnalyticsRoute,
+  BooksExploreRoute: BooksExploreRoute,
   BooksWantToReadRoute: BooksWantToReadRoute,
   BooksIndexRoute: BooksIndexRoute,
 }
