@@ -255,7 +255,7 @@ async function syncShelfData(shelf) {
         rating: safeParseInt(element.rating?.[0]),
         review: safeExtract(element.body?.[0]),
         date_added: formatDate(safeExtract(element.date_added?.[0])),
-        date_read: formatDate(safeExtract(element.date_read?.[0])),
+        date_read: formatDate(safeExtract(element.read_at?.[0])),
         date_started: formatDate(safeExtract(element.started_at?.[0])),
         read_count: safeParseInt(element.read_count?.[0]) || 1,
         owned: safeParseInt(element.owned?.[0]) || 0,
