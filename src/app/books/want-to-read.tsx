@@ -23,33 +23,35 @@ const getWantToReadPaginated = createServerFn({
       pageParam: number;
       sortBy: "title" | "author" | "date_added";
       sortOrder: "asc" | "desc";
-      titleFilter: string;
-      authorFilter: string;
+      searchFilter: string;
     } => {
       if (typeof input !== "object" || input === null) {
         throw new Error("Invalid input parameters");
       }
 
-      const params = input as any;
+      const params = input as {
+        pageParam?: number;
+        sortBy?: string;
+        sortOrder?: string;
+        searchFilter?: string;
+      };
 
       return {
         pageParam: typeof params.pageParam === "number" ? params.pageParam : 0,
         sortBy: ["title", "author", "date_added"].includes(params.sortBy)
-          ? params.sortBy
+          ? (params.sortBy as "title" | "author" | "date_added")
           : "date_added",
         sortOrder: ["asc", "desc"].includes(params.sortOrder)
-          ? params.sortOrder
+          ? (params.sortOrder as "asc" | "desc")
           : "desc",
-        titleFilter:
-          typeof params.titleFilter === "string" ? params.titleFilter : "",
-        authorFilter:
-          typeof params.authorFilter === "string" ? params.authorFilter : "",
+        searchFilter:
+          typeof params.searchFilter === "string" ? params.searchFilter : "",
       };
     },
   )
   .handler(
     async ({
-      data: { pageParam, sortBy, sortOrder, titleFilter, authorFilter },
+      data: { pageParam, sortBy, sortOrder, searchFilter },
     }): Promise<{ books: BookInfo[]; nextCursor: number | null }> => {
       try {
         const limit = 20;
@@ -61,8 +63,7 @@ const getWantToReadPaginated = createServerFn({
           offset,
           sortBy,
           sortOrder,
-          titleFilter,
-          authorFilter,
+          searchFilter,
         );
 
         if (result.books.length > 0) {
@@ -100,25 +101,16 @@ function WantToRead() {
     "date_added",
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [titleFilter, setTitleFilter] = useState("");
-  const [authorFilter, setAuthorFilter] = useState("");
-  const [debouncedTitleFilter, setDebouncedTitleFilter] = useState("");
-  const [debouncedAuthorFilter, setDebouncedAuthorFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+  const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
 
-  // Debounce the filter inputs for better performance
+  // Debounce the search input for better performance
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedTitleFilter(titleFilter);
+      setDebouncedSearchFilter(searchFilter);
     }, 300);
     return () => clearTimeout(timer);
-  }, [titleFilter]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedAuthorFilter(authorFilter);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [authorFilter]);
+  }, [searchFilter]);
 
   const {
     data: wantToReadData,
@@ -126,23 +118,16 @@ function WantToRead() {
     hasNextPage,
     isFetchingNextPage,
     status,
-    refetch,
+    // refetch,
   } = useInfiniteQuery({
-    queryKey: [
-      "wantToRead",
-      sortBy,
-      sortOrder,
-      debouncedTitleFilter,
-      debouncedAuthorFilter,
-    ],
+    queryKey: ["wantToRead", sortBy, sortOrder, debouncedSearchFilter],
     queryFn: async ({ pageParam }: { pageParam: number }) => {
       return await getWantToReadPaginated({
         data: {
           pageParam,
           sortBy,
           sortOrder,
-          titleFilter: debouncedTitleFilter,
-          authorFilter: debouncedAuthorFilter,
+          searchFilter: debouncedSearchFilter,
         },
       });
     },
@@ -185,38 +170,22 @@ function WantToRead() {
 
   // Clear all filters
   const clearFilters = () => {
-    setTitleFilter("");
-    setAuthorFilter("");
+    setSearchFilter("");
     setSortBy("date_added");
     setSortOrder("desc");
   };
 
   return (
     <div className="flex flex-col gap-4 pb-6">
-      <h1 className="text-2xl md:text-3xl font-bold">Want to Read</h1>
-
-      {/* Mobile-optimized search and filters */}
       <div className="space-y-4">
-        {/* Search inputs */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search titles..."
-              value={titleFilter}
-              onChange={(e) => setTitleFilter(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search authors..."
-              value={authorFilter}
-              onChange={(e) => setAuthorFilter(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search titles and authors..."
+            value={searchFilter}
+            onChange={(e) => setSearchFilter(e.target.value)}
+            className="pl-10"
+          />
         </div>
 
         {/* Sort controls */}
@@ -265,8 +234,7 @@ function WantToRead() {
           </Button>
 
           {/* Clear filters button */}
-          {(titleFilter ||
-            authorFilter ||
+          {(searchFilter ||
             sortBy !== "date_added" ||
             sortOrder !== "desc") && (
             <Button

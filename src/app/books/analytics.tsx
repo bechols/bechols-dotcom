@@ -313,6 +313,31 @@ export const Route = createFileRoute("/books/analytics")({
     const data = await getAnalyticsData();
     return data;
   },
+  errorComponent: ({ error, reset }) => (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h2 className="text-xl font-semibold text-red-600 mb-2">
+          Analytics Unavailable
+        </h2>
+        <p className="text-muted-foreground mb-4">
+          Unable to load reading analytics. This could be due to database issues
+          or missing data.
+        </p>
+        <button
+          onClick={reset}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Try Again
+        </button>
+      </div>
+      <details className="mt-4">
+        <summary className="cursor-pointer text-sm">Error Details</summary>
+        <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">
+          {error?.toString()}
+        </pre>
+      </details>
+    </div>
+  ),
 });
 
 function Analytics() {

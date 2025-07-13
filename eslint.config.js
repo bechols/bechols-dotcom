@@ -45,7 +45,6 @@ export default tseslint.config(
       "no-var": "error",
       "prefer-const": "error",
       strict: "error",
-      "sort-imports": "error",
     },
   }),
 

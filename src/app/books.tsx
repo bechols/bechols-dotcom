@@ -19,17 +19,25 @@ interface BookTabLinkProps {
   fullText: string;
   shortText: string;
   activeTab: string;
-  onClick?: (e: React.MouseEvent) => void;
+  onClick?: () => void;
 }
 
-function BookTabLink({ value, to, icon: Icon, fullText, shortText, activeTab, onClick }: BookTabLinkProps) {
+function BookTabLink({
+  value,
+  to,
+  icon: Icon,
+  fullText,
+  shortText,
+  activeTab,
+  onClick,
+}: BookTabLinkProps) {
   const isActive = activeTab === value;
-  
+
   return (
     <TabsTrigger value={value} asChild>
-      <Link 
-        to={to} 
-        className={`flex items-center gap-1.5 ${isActive ? 'font-semibold bg-slate-100' : ''}`}
+      <Link
+        to={to}
+        className={`flex items-center gap-1.5 ${isActive ? "font-semibold bg-slate-100" : ""}`}
         onClick={onClick}
       >
         <Icon className="h-4 w-4" />
@@ -59,7 +67,10 @@ function BooksLayout() {
   const handleTabChange = (value: string) => {
     if (value === "recently-read") {
       // Scroll to recently read section if on index page
-      if (location.pathname === "/books" || location.pathname === "/books/") {
+      if (
+        typeof window !== "undefined" &&
+        (location.pathname === "/books" || location.pathname === "/books/")
+      ) {
         const element = window.document.getElementById("recently-read-section");
         if (element) {
           element.scrollIntoView({ behavior: "smooth" });
@@ -95,12 +106,11 @@ function BooksLayout() {
               fullText="Recently Read"
               shortText="Recent"
               activeTab={activeTab}
-              onClick={(e) => {
+              onClick={() => {
                 if (
                   location.pathname === "/books" ||
                   location.pathname === "/books/"
                 ) {
-                  e.preventDefault();
                   handleTabChange("recently-read");
                 }
               }}
