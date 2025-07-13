@@ -181,6 +181,13 @@ function aggregateReadingActivity(
   const result: { [key: string]: number } = {};
   const now = new Date();
 
+  console.log('DEBUG aggregateReadingActivity:', { 
+    interval, 
+    startDate: startDate.toISOString(), 
+    endDate: endDate.toISOString(),
+    dataLength: data.length 
+  });
+
   // Adjust end date based on current time for month/week intervals
   let adjustedEndDate = new Date(endDate);
   if (interval === "month") {
@@ -234,6 +241,13 @@ function aggregateReadingActivity(
     displayPeriod: string;
   }> = [];
   const currentDate = new Date(startDate);
+  
+  console.log('DEBUG: Initial dates:', {
+    startDate: startDate.toISOString(),
+    adjustedEndDate: adjustedEndDate.toISOString(),
+    currentDate: currentDate.toISOString(),
+    currentDateYear: currentDate.getFullYear()
+  });
 
   while (currentDate <= adjustedEndDate) {
     let key: string;
@@ -250,22 +264,27 @@ function aggregateReadingActivity(
           day: "numeric",
           year: "numeric",
         });
-        currentDate.setDate(currentDate.getDate() + 7);
         break;
       }
       case "month": {
         key = currentDate.toISOString().slice(0, 7);
-        displayKey = currentDate.toLocaleDateString("en-US", {
+        // Create date from the key to ensure consistency
+        const keyDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        displayKey = keyDate.toLocaleDateString("en-US", {
           month: "short",
           year: "numeric",
         });
-        currentDate.setMonth(currentDate.getMonth() + 1);
         break;
       }
       case "year": {
         key = currentDate.getFullYear().toString();
         displayKey = key;
-        currentDate.setFullYear(currentDate.getFullYear() + 1);
+        console.log('DEBUG: Year period generation:', {
+          currentYear: currentDate.getFullYear(),
+          startYear: startDate.getFullYear(),
+          key,
+          shouldInclude: currentDate.getFullYear() >= startDate.getFullYear()
+        });
         break;
       }
     }
@@ -275,6 +294,21 @@ function aggregateReadingActivity(
       books: result[key] || 0,
       displayPeriod: displayKey,
     });
+
+    console.log('DEBUG: Added period:', { key, displayKey, books: result[key] || 0, currentDate: currentDate.toISOString() });
+
+    // Increment the date AFTER processing the current period
+    switch (interval) {
+      case "week":
+        currentDate.setDate(currentDate.getDate() + 7);
+        break;
+      case "month":
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        break;
+      case "year":
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+        break;
+    }
   }
 
   return periods;
@@ -360,9 +394,20 @@ function Analytics() {
   );
   const [endYear, setEndYear] = useState(lastYear.toString());
 
-  // Calculate date range
-  const startDate = new Date(`${startYear}-01-01`);
-  const endDate = new Date(`${endYear}-12-31`);
+  // Calculate date range - use explicit constructor to avoid timezone issues
+  const startDate = new Date(parseInt(startYear), 0, 1); // Year, month (0-based), day
+  const endDate = new Date(parseInt(endYear), 11, 31); // Year, month (0-based), day
+
+  console.log('DEBUG: User selections:', { startYear, endYear, timeInterval });
+  console.log('DEBUG: Calculated date range:', { startDate, endDate });
+  console.log('DEBUG: Selected interval and date range:', {
+    interval: timeInterval,
+    startYear,
+    endYear,
+    startDate: startDate.toISOString().slice(0, 10),
+    endDate: endDate.toISOString().slice(0, 10),
+    daysBetween: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+  });
 
   // Process reading activity data
   const readingActivityProcessed = aggregateReadingActivity(
@@ -371,6 +416,24 @@ function Analytics() {
     startDate,
     endDate,
   );
+
+  console.log('DEBUG: First few processed periods:', readingActivityProcessed.slice(0, 5));
+  console.log('DEBUG: Last few processed periods:', readingActivityProcessed.slice(-5));
+  console.log('DEBUG: Total periods in graph data:', readingActivityProcessed.length);
+  console.log('DEBUG: Graph data summary:', {
+    totalPeriods: readingActivityProcessed.length,
+    periodsWithBooks: readingActivityProcessed.filter(p => p.books > 0).length,
+    totalBooks: readingActivityProcessed.reduce((sum, p) => sum + p.books, 0),
+    dateRange: {
+      first: readingActivityProcessed[0]?.period,
+      last: readingActivityProcessed[readingActivityProcessed.length - 1]?.period
+    }
+  });
+  console.log('DEBUG: Data passed to LineChart:', {
+    dataLength: readingActivityProcessed.length,
+    allData: readingActivityProcessed,
+    chartDataKeys: readingActivityProcessed.length > 0 ? Object.keys(readingActivityProcessed[0]) : []
+  });
 
   // Transform rating distribution for stacked bar chart
   const ratingChartData = [
