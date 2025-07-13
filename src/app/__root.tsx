@@ -4,9 +4,12 @@ import {
     Outlet,
     Scripts,
     createRootRoute,
+    Link,
   } from "@tanstack/react-router"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Nav from "@/components/Nav"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 const commitSha = __GIT_COMMIT_SHA__;
 
@@ -34,6 +37,43 @@ function Footer() {
   );
 }
 
+function NotFound() {
+  return (
+    <div className="container mx-auto py-8 max-w-2xl">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-center text-6xl mb-4">404</CardTitle>
+          <p className="text-center text-xl text-muted-foreground">
+            Page not found
+          </p>
+        </CardHeader>
+        <CardContent className="text-center space-y-4">
+          <p className="text-muted-foreground">
+            Sorry, the page you're looking for doesn't exist.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button asChild>
+              <Link to="/">
+                Go Home
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/books">
+                Browse Books
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/about">
+                About Me
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -50,6 +90,7 @@ export const Route = createRootRoute({
     ]
   }),
   component: RootLayout,
+  notFoundComponent: NotFound,
   context: () => ({
     queryClient: new QueryClient({
       defaultOptions: {
