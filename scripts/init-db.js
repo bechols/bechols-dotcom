@@ -1,27 +1,27 @@
 #!/usr/bin/env node
 
-import { mkdir } from 'fs/promises'
-import { resolve } from 'path'
-import { existsSync } from 'fs'
-import Database from 'better-sqlite3'
+import { mkdir } from "fs/promises";
+import { resolve } from "path";
+import { existsSync } from "fs";
+import Database from "better-sqlite3";
 
 async function main() {
-  console.log('🗄️  Initializing SQLite database...')
-  
+  console.log("🗄️  Initializing SQLite database...");
+
   try {
     // Create public directory if it doesn't exist
-    const publicDir = resolve(process.cwd(), 'public')
+    const publicDir = resolve(process.cwd(), "public");
     if (!existsSync(publicDir)) {
-      await mkdir(publicDir, { recursive: true })
-      console.log('📁 Created public directory')
+      await mkdir(publicDir, { recursive: true });
+      console.log("📁 Created public directory");
     }
-    
+
     // Initialize database
-    const dbPath = resolve(publicDir, 'books.db')
-    const db = new Database(dbPath)
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
-    
+    const dbPath = resolve(publicDir, "books.db");
+    const db = new Database(dbPath);
+    db.pragma("journal_mode = WAL");
+    db.pragma("foreign_keys = ON");
+
     // Create books table
     db.exec(`
       CREATE TABLE IF NOT EXISTS books (
@@ -36,8 +36,8 @@ async function main() {
         publication_year INTEGER,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `)
-    
+    `);
+
     // Create reviews table
     db.exec(`
       CREATE TABLE IF NOT EXISTS reviews (
@@ -55,28 +55,27 @@ async function main() {
         FOREIGN KEY (goodreads_id) REFERENCES books(goodreads_id),
         UNIQUE(goodreads_id, shelf)
       )
-    `)
-    
+    `);
+
     // Create indexes for better performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_books_goodreads_id ON books(goodreads_id);
       CREATE INDEX IF NOT EXISTS idx_reviews_goodreads_id ON reviews(goodreads_id);
       CREATE INDEX IF NOT EXISTS idx_reviews_shelf ON reviews(shelf);
       CREATE INDEX IF NOT EXISTS idx_reviews_date_read ON reviews(date_read);
-    `)
-    
+    `);
+
     // Test the connection
-    const result = db.prepare('SELECT COUNT(*) as count FROM books').get()
-    console.log('✅ Database initialized successfully')
-    console.log(`📊 Books table has ${result.count} records`)
-    
+    const result = db.prepare("SELECT COUNT(*) as count FROM books").get();
+    console.log("✅ Database initialized successfully");
+    console.log(`📊 Books table has ${result.count} records`);
+
     // Close the database
-    db.close()
-    
+    db.close();
   } catch (error) {
-    console.error('❌ Error initializing database:', error)
-    process.exit(1)
+    console.error("❌ Error initializing database:", error);
+    process.exit(1);
   }
 }
 
-main().catch(console.error)
+main().catch(console.error);

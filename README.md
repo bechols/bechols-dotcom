@@ -12,7 +12,7 @@ This is a personal website built with [TanStack Start](https://tanstack.com/star
 
 ### Prerequisites
 
-- Node.js 22+ 
+- Node.js 22+
 - npm, yarn, pnpm, or bun
 
 ### Installation
@@ -79,21 +79,27 @@ src/
 ## Key Features
 
 ### TanStack Server Functions
+
 The books page uses TanStack Server Functions for secure server-side API calls to Goodreads, providing:
+
 - Server-side data fetching
 - Automatic loading states
 - Type-safe data handling
 
 ### File-Based Routing
+
 Routes are automatically generated from the file structure in `src/app/`:
+
 - `/` → `index.tsx`
-- `/about` → `about.tsx` 
+- `/about` → `about.tsx`
 - `/about/user-manual` → `about/user-manual.tsx`
 - `/books` → `books.tsx`
 - `/interesting` → `interesting.tsx`
 
 ### Component System
+
 Built on top of shadcn/ui for consistent, accessible components:
+
 - Radix UI primitives
 - Tailwind CSS styling
 - Full TypeScript support
@@ -101,10 +107,10 @@ Built on top of shadcn/ui for consistent, accessible components:
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
+| Variable            | Description                          | Required             |
+| ------------------- | ------------------------------------ | -------------------- |
 | `GOODREADS_USER_ID` | Your Goodreads user ID for API calls | Yes (for books page) |
-| `GOODREADS_API_KEY` | Your Goodreads API key | Yes (for books page) |
+| `GOODREADS_API_KEY` | Your Goodreads API key               | Yes (for books page) |
 
 ## Learn More
 
@@ -123,6 +129,7 @@ Deployed on Vercel
 ## Migration Notes
 
 This project was migrated from Next.js to TanStack Start, maintaining all functionality while upgrading to:
+
 - More flexible routing system
 - Better TypeScript integration
 - Improved development experience with Vite

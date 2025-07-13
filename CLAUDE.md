@@ -9,23 +9,27 @@ This is a personal website built with TanStack Start (React Router), TypeScript,
 ## Common Commands
 
 ### Development
+
 - `npm run dev` - Start development server with Turbopack (runs on http://localhost:3000)
 - `npm run build` - Build the application for production
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint to check code quality
 
 ### Database Scripts
+
 - `node scripts/scrape-goodreads.js` - Full Goodreads data scrape to populate database
 - `node scripts/sync-goodreads.js` - Incremental sync for recent changes
 - `node scripts/init-db.js` - Initialize database schema
 - `node scripts/test-db-queries.js` - Test database query functions
 
 ### Testing
+
 No test framework is currently configured in this project.
 
 ## Architecture & Key Components
 
 ### Project Structure
+
 - **TanStack Start Router**: Uses TanStack Start with React Router for file-based routing
 - **Routing**: Files in `src/app/` directory map to routes (e.g., `src/app/books/analytics.tsx` → `/books/analytics`)
 - **Route Components**: Each route file exports a `Route` object created with `createFileRoute()`
@@ -35,7 +39,8 @@ No test framework is currently configured in this project.
 - **Styling**: Tailwind CSS with custom theme configuration
 
 ### UI Framework
-- **Radix UI**: Core component library (@radix-ui/react-*)
+
+- **Radix UI**: Core component library (@radix-ui/react-\*)
 - **Shadcn/ui**: Component system built on Radix (components/ui/)
 - **Lucide React**: Icon library
 - **React Icons**: Additional icon sets (Simple Icons)
@@ -43,13 +48,16 @@ No test framework is currently configured in this project.
 ### Key Features
 
 #### Goodreads Integration
+
 The `/books` page integrates with Goodreads API to display:
+
 - Currently reading books
 - Recently read books with ratings and reviews
 - Uses XML parsing (xml2js) and axios for API calls
 - Requires environment variables: `GOODREADS_USER_ID` and `GOODREADS_API_KEY`
 
 #### Custom Styling
+
 - **Tailwind v4**: Uses Tailwind CSS v4 with @tailwindcss/vite plugin
 - **IMPORTANT**: globals.css must include `@import "tailwindcss";` for Tailwind v4 to work properly
 - Williams College purple color: `#500082` (defined as `williams-purple` in Tailwind config)
@@ -57,10 +65,12 @@ The `/books` page integrates with Goodreads API to display:
 - Responsive design with mobile-first approach
 
 #### Git Integration
+
 - Build-time git commit SHA injection via `next.config.mjs`
 - Displayed in footer as `NEXT_PUBLIC_GIT_COMMIT_SHA`
 
 ### Component Architecture
+
 - **Nav.tsx**: Main navigation with social links (LinkedIn, GitHub, email)
 - **Hero.tsx**: Homepage hero section with personal photo and navigation buttons
 - **UI Components**: Reusable components following Shadcn/ui patterns
@@ -68,6 +78,7 @@ The `/books` page integrates with Goodreads API to display:
   - All styled with Tailwind CSS and CSS variables for theming
 
 ### Content Structure
+
 - Personal pages in `src/app/about/` with nested routes
 - Static content pages for books and interesting links
 - Image optimization with React Image component
@@ -76,6 +87,7 @@ The `/books` page integrates with Goodreads API to display:
 ## Environment Variables
 
 Required for full functionality:
+
 - `GOODREADS_USER_ID` - Goodreads user ID for API calls
 - `GOODREADS_API_KEY` - Goodreads API key for book data
 - `NEXT_PUBLIC_GIT_COMMIT_SHA` - Auto-generated during build
@@ -83,15 +95,17 @@ Required for full functionality:
 ## Database & Analytics
 
 ### Database Architecture
+
 - **SQLite Database**: Uses SQLite database stored in `public/books.db` (accessible as static asset)
 - **Async Database Functions**: All database functions are async to support both local file access and network fetching
-- **Vercel Deployment Strategy**: 
+- **Vercel Deployment Strategy**:
   - **Local Development**: Reads database from `public/books.db` file path
   - **Vercel Production**: Fetches database from `https://bechols.com/books.db` and writes to `/tmp/books.db`
   - **Error Handling**: Gracefully falls back to empty data if database unavailable
 - **Database Queries**: Custom functions in `lib/database-queries.ts` for book data operations
 
 ### Analytics System
+
 - **Complex Analytics**: Reading analytics with time-based aggregation at `/books/analytics`
   - Supports week/month/year intervals with current-time boundary enforcement
   - ISO 8601 date format (YYYY-MM-DD) with database constraints for data integrity
@@ -102,6 +116,7 @@ Required for full functionality:
 - **Dual Data Sources**: Falls back from database to Goodreads API if database is empty
 
 ### Critical Implementation Details
+
 - **Server Functions**: Use `createServerFn()` for database access - all must be async
 - **Database Path**: Always use `public/books.db` (not `data/books.db`) for consistency
 - **Vercel Limitations**: Serverless functions can't access `public/` via filesystem, must fetch via HTTP
@@ -135,6 +150,7 @@ Required for full functionality:
 ## GitHub Actions & Automation
 
 ### Auto-PR System
+
 - **Auto PR Creation**: GitHub Action creates PRs automatically when pushing to any branch (except main)
 - **Vercel Preview Integration**: Posts Vercel preview URLs in PR comments automatically
 - **Setup Required**: Repository must have "Read and write permissions" enabled for Actions
@@ -142,6 +158,7 @@ Required for full functionality:
 - **Optional Secrets**: `VERCEL_TOKEN` and `VERCEL_TEAM_ID` for faster preview URL detection
 
 ### Workflow Files
+
 - `.github/workflows/auto-pr.yml` - Creates PRs and waits for Vercel deployments
 - `.github/workflows/vercel-preview-comment.yml` - Updates PR comments with preview URLs
 
@@ -154,4 +171,5 @@ Required for full functionality:
 - **Accessibility**: Proper ARIA labels, semantic HTML, and keyboard navigation
 
 ## Shadcn UI Components Notes
+
 - When using shadcn UI components, make sure they're actually installed in @components/ui/ . it's ok to add new components from https://ui.shadcn.com/, just follow the installation steps. https://ui.shadcn.com/docs/installation/tanstack

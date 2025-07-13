@@ -4,12 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
-@import '@fontsource-variable/dm-sans'; 
-@import '@fontsource-variable/jetbrains-mono'; 
+@import "@fontsource-variable/dm-sans";
+@import "@fontsource-variable/jetbrains-mono";
 
 @theme {
-  --font-sans: 'DM Sans Variable', sans-serif; 
-  --font-mono: 'JetBrains Mono Variable', monospace; 
+  --font-sans: "DM Sans Variable", sans-serif;
+  --font-mono: "JetBrains Mono Variable", monospace;
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
@@ -52,7 +52,9 @@ body {
   font-family: var(--font-sans);
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-feature-settings: "rlig" 1, "calt" 1;
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
 }
 
 ::selection {
@@ -65,7 +67,8 @@ a {
   text-decoration: inherit;
 }
 
-button, [role="button"] {
+button,
+[role="button"] {
   cursor: pointer;
 }
 

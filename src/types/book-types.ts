@@ -9,11 +9,11 @@ export interface GoodreadsReviewElement {
           author: [
             {
               name: [string];
-            }
+            },
           ];
-        }
+        },
       ];
-    }
+    },
   ];
   rating: [string];
   body: [string];
@@ -24,7 +24,7 @@ export interface GoodreadsResult {
     reviews: [
       {
         review?: GoodreadsReviewElement[];
-      }
+      },
     ];
   };
 }

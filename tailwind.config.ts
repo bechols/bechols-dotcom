@@ -1,4 +1,4 @@
-import type { Config } from '@tailwindcss/vite'
+import type { Config } from "@tailwindcss/vite";
 
 export default {
   content: [
@@ -14,10 +14,10 @@ export default {
         "williams-purple": "#500082",
       },
       fontFamily: {
-        sans: ['DM Sans Variable', 'sans-serif'],
-        mono: ['JetBrains Mono Variable', 'monospace'],
+        sans: ["DM Sans Variable", "sans-serif"],
+        mono: ["JetBrains Mono Variable", "monospace"],
       },
     },
   },
-  plugins: ['@tailwindcss/typography'],
-} satisfies Config
+  plugins: ["@tailwindcss/typography"],
+} satisfies Config;

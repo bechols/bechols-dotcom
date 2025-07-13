@@ -1,29 +1,39 @@
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Book, CalendarDays, Star } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import React, { useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/react-start'
-import { getDatabase } from '@/lib/database'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Book, CalendarDays, Star } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { getDatabase } from "@/lib/database";
 
 type AnalyticsData = {
-  totalBooks: number
-  averageRating: number
-  booksThisYear: number
-  ratingDistribution: Array<{ rating: number; count: number }>
-  topAuthors: Array<{ author: string; count: number }>
-  readingActivity: Array<{ date_started: string; books: number }>
-  availableYears: number[]
-}
+  totalBooks: number;
+  averageRating: number;
+  booksThisYear: number;
+  ratingDistribution: Array<{ rating: number; count: number }>;
+  topAuthors: Array<{ author: string; count: number }>;
+  readingActivity: Array<{ date_started: string; books: number }>;
+  availableYears: number[];
+};
 
 const getAnalyticsData = createServerFn({
-  method: 'GET',
+  method: "GET",
 }).handler(async (): Promise<AnalyticsData> => {
-  const db = await getDatabase()
-  
+  const db = await getDatabase();
+
   // If database is not available, return empty data
   if (!db) {
-    console.warn('Database not available, returning empty analytics data')
+    console.warn("Database not available, returning empty analytics data");
     return {
       totalBooks: 0,
       averageRating: 0,
@@ -31,37 +41,51 @@ const getAnalyticsData = createServerFn({
       ratingDistribution: [],
       topAuthors: [],
       readingActivity: [],
-      availableYears: []
-    }
+      availableYears: [],
+    };
   }
-  
+
   // Total books read
-  const totalBooksResult = db.prepare(`
+  const totalBooksResult = db
+    .prepare(
+      `
     SELECT COUNT(DISTINCT b.id) as count
     FROM books b
-    INNER JOIN reviews r ON b.id = r.book_id
+    INNER JOIN reviews r ON b.goodreads_id = r.goodreads_id
     WHERE r.shelf = 'read'
-  `).get() as { count: number }
-  
+  `,
+    )
+    .get() as { count: number };
+
   // Average rating
-  const avgRatingResult = db.prepare(`
+  const avgRatingResult = db
+    .prepare(
+      `
     SELECT AVG(r.rating) as avg_rating
     FROM reviews r
     WHERE r.shelf = 'read' AND r.rating IS NOT NULL
-  `).get() as { avg_rating: number | null }
-  
+  `,
+    )
+    .get() as { avg_rating: number | null };
+
   // Books finished this year - use three-part fallback
-  const currentYear = new Date().getFullYear().toString()
-  const booksThisYear = db.prepare(`
+  const currentYear = new Date().getFullYear().toString();
+  const booksThisYear = db
+    .prepare(
+      `
     SELECT COUNT(*) as count
     FROM reviews r
     WHERE r.shelf = 'read' 
       AND COALESCE(date_read, date_started, date_added) IS NOT NULL
       AND substr(COALESCE(date_read, date_started, date_added), 1, 4) = ?
-  `).get(currentYear) as { count: number }
-  
+  `,
+    )
+    .get(currentYear) as { count: number };
+
   // Rating distribution
-  const ratingDistribution = db.prepare(`
+  const ratingDistribution = db
+    .prepare(
+      `
     SELECT 
       r.rating,
       COUNT(*) as count
@@ -69,24 +93,32 @@ const getAnalyticsData = createServerFn({
     WHERE r.shelf = 'read' AND r.rating IS NOT NULL
     GROUP BY r.rating
     ORDER BY r.rating
-  `).all() as Array<{ rating: number; count: number }>
-  
+  `,
+    )
+    .all() as Array<{ rating: number; count: number }>;
+
   // Top authors
-  const topAuthors = db.prepare(`
+  const topAuthors = db
+    .prepare(
+      `
     SELECT 
       b.author,
       COUNT(*) as count
     FROM books b
-    INNER JOIN reviews r ON b.id = r.book_id
+    INNER JOIN reviews r ON b.goodreads_id = r.goodreads_id
     WHERE r.shelf = 'read'
     GROUP BY b.author
     ORDER BY count DESC
     LIMIT 10
-  `).all() as Array<{ author: string; count: number }>
-  
+  `,
+    )
+    .all() as Array<{ author: string; count: number }>;
+
   // Reading activity over time - get all data for flexible filtering
   // Use three-part fallback: date_read (finished) -> date_started -> date_added
-  const readingActivity = db.prepare(`
+  const readingActivity = db
+    .prepare(
+      `
     SELECT 
       COALESCE(date_read, date_started, date_added) as date_started,
       COUNT(*) as books
@@ -95,22 +127,28 @@ const getAnalyticsData = createServerFn({
       AND COALESCE(date_read, date_started, date_added) IS NOT NULL
     GROUP BY COALESCE(date_read, date_started, date_added)
     ORDER BY COALESCE(date_read, date_started, date_added)
-  `).all() as Array<{ date_started: string; books: number }>
-  
+  `,
+    )
+    .all() as Array<{ date_started: string; books: number }>;
+
   // Get available years from the data using same fallback logic
-  const availableYearsResult = db.prepare(`
+  const availableYearsResult = db
+    .prepare(
+      `
     SELECT DISTINCT substr(COALESCE(date_read, date_started, date_added), 1, 4) as year
     FROM reviews r
     WHERE r.shelf = 'read' 
       AND COALESCE(date_read, date_started, date_added) IS NOT NULL
       AND substr(COALESCE(date_read, date_started, date_added), 1, 4) IS NOT NULL
     ORDER BY year
-  `).all() as Array<{ year: string }>
-  
+  `,
+    )
+    .all() as Array<{ year: string }>;
+
   const availableYears = availableYearsResult
-    .map(row => parseInt(row.year))
-    .filter(year => !isNaN(year))
-  
+    .map((row) => parseInt(row.year))
+    .filter((year) => !isNaN(year));
+
   return {
     totalBooks: totalBooksResult.count,
     averageRating: avgRatingResult.avg_rating ?? 0,
@@ -118,123 +156,138 @@ const getAnalyticsData = createServerFn({
     ratingDistribution,
     topAuthors,
     readingActivity,
-    availableYears
-  }
-})
-
+    availableYears,
+  };
+});
 
 // Helper function to parse ISO date from database (e.g., "2024-01-15")
 function parseISODate(dateStr: string): Date | null {
   try {
     // ISO date format is YYYY-MM-DD
-    const date = new Date(dateStr + 'T00:00:00')
-    return isNaN(date.getTime()) ? null : date
+    const date = new Date(dateStr + "T00:00:00");
+    return isNaN(date.getTime()) ? null : date;
   } catch {
-    return null
+    return null;
   }
 }
 
 // Helper function to aggregate reading activity by time period
 function aggregateReadingActivity(
   data: Array<{ date_started: string; books: number }>,
-  interval: 'week' | 'month' | 'year',
+  interval: "week" | "month" | "year",
   startDate: Date,
-  endDate: Date
+  endDate: Date,
 ): Array<{ period: string; books: number; displayPeriod: string }> {
-  const result: { [key: string]: number } = {}
-  const now = new Date()
-  
+  const result: { [key: string]: number } = {};
+  const now = new Date();
+
   // Adjust end date based on current time for month/week intervals
-  let adjustedEndDate = new Date(endDate)
-  if (interval === 'month') {
+  let adjustedEndDate = new Date(endDate);
+  if (interval === "month") {
     // Don't show months beyond current month
-    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     if (adjustedEndDate > currentMonth) {
-      adjustedEndDate = currentMonth
+      adjustedEndDate = currentMonth;
     }
-  } else if (interval === 'week') {
+  } else if (interval === "week") {
     // Don't show weeks beyond current week (get Monday of current week)
-    const currentWeekMonday = new Date(now)
-    currentWeekMonday.setDate(now.getDate() - now.getDay() + 1)
-    currentWeekMonday.setHours(0, 0, 0, 0)
+    const currentWeekMonday = new Date(now);
+    currentWeekMonday.setDate(now.getDate() - now.getDay() + 1);
+    currentWeekMonday.setHours(0, 0, 0, 0);
     if (adjustedEndDate > currentWeekMonday) {
-      adjustedEndDate = currentWeekMonday
+      adjustedEndDate = currentWeekMonday;
     }
   }
-  
+
   // Filter and aggregate data
   for (const item of data) {
-    const date = parseISODate(item.date_started)
-    if (!date || date < startDate || date > adjustedEndDate) continue
-    
-    let key: string
-    
+    const date = parseISODate(item.date_started);
+    if (!date || date < startDate || date > adjustedEndDate) continue;
+
+    let key: string;
+
     switch (interval) {
-      case 'week': {
+      case "week": {
         // Get Monday of the week
-        const monday = new Date(date)
-        monday.setDate(date.getDate() - date.getDay() + 1)
-        key = monday.toISOString().slice(0, 10)
-        break
+        const monday = new Date(date);
+        monday.setDate(date.getDate() - date.getDay() + 1);
+        key = monday.toISOString().slice(0, 10);
+        break;
       }
-      case 'month': {
-        key = date.toISOString().slice(0, 7) // YYYY-MM
-        break
+      case "month": {
+        key = date.toISOString().slice(0, 7); // YYYY-MM
+        break;
       }
-      case 'year': {
-        key = date.getFullYear().toString()
-        break
+      case "year": {
+        key = date.getFullYear().toString();
+        break;
       }
     }
-    
-    result[key] = (result[key] || 0) + item.books
+
+    result[key] = (result[key] || 0) + item.books;
   }
-  
+
   // Fill missing periods with zeros
-  const periods: Array<{ period: string; books: number; displayPeriod: string }> = []
-  const currentDate = new Date(startDate)
-  
+  const periods: Array<{
+    period: string;
+    books: number;
+    displayPeriod: string;
+  }> = [];
+  const currentDate = new Date(startDate);
+
   while (currentDate <= adjustedEndDate) {
-    let key: string
-    let displayKey: string
-    
+    let key: string;
+    let displayKey: string;
+
     switch (interval) {
-      case 'week': {
+      case "week": {
         // Get Monday of the week
-        const monday = new Date(currentDate)
-        monday.setDate(currentDate.getDate() - currentDate.getDay() + 1)
-        key = monday.toISOString().slice(0, 10)
-        displayKey = monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        currentDate.setDate(currentDate.getDate() + 7)
-        break
+        const monday = new Date(currentDate);
+        monday.setDate(currentDate.getDate() - currentDate.getDay() + 1);
+        key = monday.toISOString().slice(0, 10);
+        displayKey = monday.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        currentDate.setDate(currentDate.getDate() + 7);
+        break;
       }
-      case 'month': {
-        key = currentDate.toISOString().slice(0, 7)
-        displayKey = currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-        currentDate.setMonth(currentDate.getMonth() + 1)
-        break
+      case "month": {
+        key = currentDate.toISOString().slice(0, 7);
+        displayKey = currentDate.toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        });
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        break;
       }
-      case 'year': {
-        key = currentDate.getFullYear().toString()
-        displayKey = key
-        currentDate.setFullYear(currentDate.getFullYear() + 1)
-        break
+      case "year": {
+        key = currentDate.getFullYear().toString();
+        displayKey = key;
+        currentDate.setFullYear(currentDate.getFullYear() + 1);
+        break;
       }
     }
-    
+
     periods.push({
       period: key,
       books: result[key] || 0,
-      displayPeriod: displayKey
-    })
+      displayPeriod: displayKey,
+    });
   }
-  
-  return periods
+
+  return periods;
 }
 
-function StatCard({ title, value, icon: Icon, subtitle }: { 
-  title: string; 
-  value: string | number; 
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  subtitle,
+}: {
+  title: string;
+  value: string | number;
   icon: React.ElementType;
   subtitle?: string;
 }) {
@@ -246,60 +299,71 @@ function StatCard({ title, value, icon: Icon, subtitle }: {
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+        {subtitle && (
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
-export const Route = createFileRoute('/books/analytics')({
+export const Route = createFileRoute("/books/analytics")({
   component: Analytics,
   loader: async () => {
-    const data = await getAnalyticsData()
-    return data
+    const data = await getAnalyticsData();
+    return data;
   },
-})
+});
 
 function Analytics() {
-  const data = Route.useLoaderData()
-  
+  const data = Route.useLoaderData();
+
   // Get dynamic year options
-  const currentYear = new Date().getFullYear()
-  const firstYear = data.availableYears[0] || currentYear - 2
-  const lastYear = Math.max(data.availableYears[data.availableYears.length - 1] || currentYear, currentYear)
-  
+  const currentYear = new Date().getFullYear();
+  const firstYear = data.availableYears[0] || currentYear - 2;
+  const lastYear = Math.max(
+    data.availableYears[data.availableYears.length - 1] || currentYear,
+    currentYear,
+  );
+
   // State for time controls
-  const [timeInterval, setTimeInterval] = useState<'week' | 'month' | 'year'>('month')
-  const [startYear, setStartYear] = useState(Math.max(firstYear, lastYear - 2).toString())
-  const [endYear, setEndYear] = useState(lastYear.toString())
-  
+  const [timeInterval, setTimeInterval] = useState<"week" | "month" | "year">(
+    "month",
+  );
+  const [startYear, setStartYear] = useState(
+    Math.max(firstYear, lastYear - 2).toString(),
+  );
+  const [endYear, setEndYear] = useState(lastYear.toString());
+
   // Calculate date range
-  const startDate = new Date(`${startYear}-01-01`)
-  const endDate = new Date(`${endYear}-12-31`)
-  
+  const startDate = new Date(`${startYear}-01-01`);
+  const endDate = new Date(`${endYear}-12-31`);
+
   // Process reading activity data
   const readingActivityProcessed = aggregateReadingActivity(
     data.readingActivity,
     timeInterval,
     startDate,
-    endDate
-  )
-  
+    endDate,
+  );
+
   // Transform rating distribution for stacked bar chart
-  const ratingChartData = [{
-    name: 'All Books',
-    '0★': data.ratingDistribution.find(r => r.rating === 0)?.count ?? 0,
-    '1★': data.ratingDistribution.find(r => r.rating === 1)?.count ?? 0,
-    '2★': data.ratingDistribution.find(r => r.rating === 2)?.count ?? 0,
-    '3★': data.ratingDistribution.find(r => r.rating === 3)?.count ?? 0,
-    '4★': data.ratingDistribution.find(r => r.rating === 4)?.count ?? 0,
-    '5★': data.ratingDistribution.find(r => r.rating === 5)?.count ?? 0,
-  }]
-  
+  const ratingChartData = [
+    {
+      name: "All Books",
+      "0★": data.ratingDistribution.find((r) => r.rating === 0)?.count ?? 0,
+      "1★": data.ratingDistribution.find((r) => r.rating === 1)?.count ?? 0,
+      "2★": data.ratingDistribution.find((r) => r.rating === 2)?.count ?? 0,
+      "3★": data.ratingDistribution.find((r) => r.rating === 3)?.count ?? 0,
+      "4★": data.ratingDistribution.find((r) => r.rating === 4)?.count ?? 0,
+      "5★": data.ratingDistribution.find((r) => r.rating === 5)?.count ?? 0,
+    },
+  ];
+
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 md:px-8 py-8">
+    <div>
       <h1 className="text-3xl font-bold mb-8">Reading Analytics</h1>
-      
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <StatCard
@@ -321,10 +385,9 @@ function Analytics() {
           subtitle={new Date().getFullYear().toString()}
         />
       </div>
-      
+
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
         {/* Reading Activity Over Time */}
         <Card className="col-span-1 lg:col-span-2">
           <CardHeader>
@@ -333,9 +396,13 @@ function Analytics() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium">Interval:</label>
-                  <select 
-                    value={timeInterval} 
-                    onChange={(e) => setTimeInterval(e.target.value as 'week' | 'month' | 'year')}
+                  <select
+                    value={timeInterval}
+                    onChange={(e) =>
+                      setTimeInterval(
+                        e.target.value as "week" | "month" | "year",
+                      )
+                    }
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="week">Week</option>
@@ -345,25 +412,35 @@ function Analytics() {
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium">From:</label>
-                  <select 
-                    value={startYear} 
+                  <select
+                    value={startYear}
                     onChange={(e) => setStartYear(e.target.value)}
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {Array.from({length: lastYear - firstYear + 1}, (_, i) => firstYear + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
+                    {Array.from(
+                      { length: lastYear - firstYear + 1 },
+                      (_, i) => firstYear + i,
+                    ).map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
                     ))}
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-sm font-medium">To:</label>
-                  <select 
-                    value={endYear} 
+                  <select
+                    value={endYear}
                     onChange={(e) => setEndYear(e.target.value)}
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    {Array.from({length: lastYear - firstYear + 1}, (_, i) => firstYear + i).map(year => (
-                      <option key={year} value={year}>{year}</option>
+                    {Array.from(
+                      { length: lastYear - firstYear + 1 },
+                      (_, i) => firstYear + i,
+                    ).map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -374,23 +451,32 @@ function Analytics() {
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={readingActivityProcessed}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="displayPeriod" 
+                <XAxis
+                  dataKey="displayPeriod"
                   angle={-45}
                   textAnchor="end"
                   height={80}
                 />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   labelFormatter={(label: string | number) => label}
-                  formatter={(value: number): [number, string] => [value, 'Books']}
+                  formatter={(value: number): [number, string] => [
+                    value,
+                    "Books",
+                  ]}
                 />
-                <Line type="monotone" dataKey="books" stroke="#8884d8" strokeWidth={2} dot={{ fill: '#8884d8' }} />
+                <Line
+                  type="monotone"
+                  dataKey="books"
+                  stroke="#8884d8"
+                  strokeWidth={2}
+                  dot={{ fill: "#8884d8" }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
+
         {/* Top Authors */}
         <Card>
           <CardHeader>
@@ -399,7 +485,10 @@ function Analytics() {
           <CardContent>
             <div className="space-y-3">
               {data.topAuthors.slice(0, 10).map((author, index) => (
-                <div key={author.author} className="flex items-center justify-between">
+                <div
+                  key={author.author}
+                  className="flex items-center justify-between"
+                >
                   <div className="flex items-center space-x-2">
                     <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                       {index + 1}
@@ -408,19 +497,23 @@ function Analytics() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="w-32 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
-                        style={{ width: `${(author.count / data.topAuthors[0].count) * 100}%` }}
+                      <div
+                        className="bg-blue-500 h-2 rounded-full"
+                        style={{
+                          width: `${(author.count / data.topAuthors[0].count) * 100}%`,
+                        }}
                       />
                     </div>
-                    <span className="text-sm font-bold text-gray-600">{author.count}</span>
+                    <span className="text-sm font-bold text-gray-600">
+                      {author.count}
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Rating Distribution */}
         <Card>
           <CardHeader>
@@ -435,13 +528,15 @@ function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number, name: string) => [value, name]}
-                  labelFormatter={() => 'Rating Distribution'}
+                  labelFormatter={() => "Rating Distribution"}
                   itemSorter={(item) => {
                     // Sort by rating value in descending order (5★ to 0★)
-                    const rating = parseInt(item.dataKey?.toString().replace('★', '') ?? '0')
-                    return -rating
+                    const rating = parseInt(
+                      item.dataKey?.toString().replace("★", "") ?? "0",
+                    );
+                    return -rating;
                   }}
                 />
                 <Bar dataKey="0★" stackId="a" fill="#ef4444" />
@@ -454,8 +549,7 @@ function Analytics() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        
       </div>
     </div>
-  )
+  );
 }

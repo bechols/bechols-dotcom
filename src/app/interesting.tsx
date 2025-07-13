@@ -3,9 +3,9 @@ import {
   CardContent,
   CardDescription,
   CardTitle,
-} from "@/components/ui/card"
-import Markdown from "react-markdown"
-import { createFileRoute } from '@tanstack/react-router'
+} from "@/components/ui/card";
+import Markdown from "react-markdown";
+import { createFileRoute } from "@tanstack/react-router";
 
 const interesting = [
   {
@@ -26,7 +26,8 @@ To pass the remaining time, start shuffling your deck of cards. Every billion ye
   {
     title: "The Economics of Time Travel",
     sourceName: "Arjun Narayan",
-    sourceURL: "https://www.theseedsofscience.pub/p/the-economics-of-time-travel",
+    sourceURL:
+      "https://www.theseedsofscience.pub/p/the-economics-of-time-travel",
     text: `The lack of time travellers visiting us may be seen as evidence that time travel is not possible. In this article, I argue an alternative explanation is that we are not economically important enough to our descendants to justify the costs of time travel. Using a cost-benefit analysis, I elaborate on this argument. I suggest that the major cost of time travel is likely to be the energy cost, whilst the largest benefit of time travel is knowledge which the present possesses, but the future has lost. Focusing on this benefit, I argue it is extremely unlikely that we possess a piece of knowledge which is sufficiently important to a future civilisation (system critical), but also has been lost by said civilisation. This is to say, we may not have been visited by time travellers because we are not important enough.`,
   },
   {
@@ -52,7 +53,8 @@ Some have tried to explain this by suggesting that long-lived planets are not lo
   {
     title: "The Evolutionary Argument Against Reality",
     sourceName: "Donald Hoffman",
-    sourceURL: "https://www.quantamagazine.org/the-evolutionary-argument-against-reality-20160421",
+    sourceURL:
+      "https://www.quantamagazine.org/the-evolutionary-argument-against-reality-20160421",
     text: `Suppose in reality there's a resource, like water, and you can quantify how much of it there is in an objective order — very little water, medium amount of water, a lot of water. Now suppose your fitness function is linear, so a little water gives you a little fitness, medium water gives you medium fitness, and lots of water gives you lots of fitness — in that case, the organism that sees the truth about the water in the world can win, but only because the fitness function happens to align with the true structure in reality. Generically, in the real world, that will never be the case. Something much more natural is a bell curve — say, too little water you die of thirst, but too much water you drown, and only somewhere in between is good for survival. Now the fitness function doesn't match the structure in the real world. And that's enough to send truth to extinction. For example, an organism tuned to fitness might see small and large quantities of some resource as, say, red, to indicate low fitness, whereas they might see intermediate quantities as green, to indicate high fitness. Its perceptions will be tuned to fitness, but not to truth. It won't see any distinction between small and large — it only sees red — even though such a distinction exists in reality.
 
 But how can seeing a false reality be beneficial to an organism's survival?
@@ -62,7 +64,8 @@ There's a metaphor that's only been available to us in the past 30 or 40 years, 
   {
     title: "Heads or Tails",
     sourceName: "Steven D. Levitt",
-    sourceURL: "https://www.nber.org/system/files/working_papers/w22487/w22487.pdf",
+    sourceURL:
+      "https://www.nber.org/system/files/working_papers/w22487/w22487.pdf",
     text: `Little is known about whether people make good choices when facing important decisions. This
 paper reports on a large-scale randomized field experiment in which research subjects having
 difficulty making a decision flipped a coin to help determine their choice. For important decisions
@@ -115,13 +118,15 @@ At least several of these features might be considered computational in nature. 
   {
     title: "Boundaries",
     sourceName: "Marshall McLuhan",
-    sourceURL: "https://www.goodreads.com/quotes/677252-once-you-see-the-boundaries-of-your-environment-they-are",
+    sourceURL:
+      "https://www.goodreads.com/quotes/677252-once-you-see-the-boundaries-of-your-environment-they-are",
     text: `Once you see the boundaries of your environment, they are no longer the boundaries of your environment.`,
   },
   {
     title: "Reality has a surprising amount of detail",
     sourceName: "John Salvatier",
-    sourceURL: "http://johnsalvatier.org/blog/2017/reality-has-a-surprising-amount-of-detail",
+    sourceURL:
+      "http://johnsalvatier.org/blog/2017/reality-has-a-surprising-amount-of-detail",
     text: `Before you've noticed important details they are, of course, basically invisible. It's hard to put your attention on them because you don't even know what you're looking for. But after you see them they quickly become so integrated into your intuitive models of the world that they become essentially transparent. Do you remember the insights that were crucial in learning to ride a bike or drive? How about the details and insights you have that led you to be good at the things you're good at?
 
 This means it's really easy to get stuck. Stuck in your current way of seeing and thinking about things. Frames are made out of the details that seem important to you. The important details you haven't noticed are invisible to you, and the details you have noticed seem completely obvious and you see right through them. This all makes makes it difficult to imagine how you could be missing something important.
@@ -130,7 +135,8 @@ This means it's really easy to get stuck. Stuck in your current way of seeing an
   {
     title: "Thingifying the world",
     sourceName: "LDMCE",
-    sourceURL: "https://ldmce.wordpress.com/2020/09/09/thingifying-the-world-ii/",
+    sourceURL:
+      "https://ldmce.wordpress.com/2020/09/09/thingifying-the-world-ii/",
     text: `A sign in the University of Chicago Bookstore:
 
 — 'Umbrellas are non-refundable.'
@@ -151,11 +157,11 @@ I hope the umbrella example helps to show what I mean by 'thingify'.  The sign i
     sourceURL: "https://twitter.com/simongerman600/status/972432830717243392",
     text: `Verschlimmbessern: Making something worse while attempting to improve it.`,
   },
-]
+];
 
-export const Route = createFileRoute('/interesting')({
+export const Route = createFileRoute("/interesting")({
   component: Interesting,
-})
+});
 
 function Interesting() {
   return (
@@ -178,15 +184,13 @@ function Interesting() {
                   <Markdown
                     components={{
                       p(props) {
-                        return <p>{props.children}</p>
+                        return <p>{props.children}</p>;
                       },
                       ul(props) {
-                        return (
-                          <ul className="list-disc">{props.children}</ul>
-                        )
+                        return <ul className="list-disc">{props.children}</ul>;
                       },
                       li(props) {
-                        return <li className="ml-8">{props.children}</li>
+                        return <li className="ml-8">{props.children}</li>;
                       },
                     }}
                   >
@@ -196,8 +200,8 @@ function Interesting() {
               </CardContent>
             </Card>
           </a>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

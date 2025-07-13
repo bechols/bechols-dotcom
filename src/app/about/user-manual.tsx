@@ -1,5 +1,5 @@
-import Markdown from "react-markdown"
-import { createFileRoute } from '@tanstack/react-router'
+import Markdown from "react-markdown";
+import { createFileRoute } from "@tanstack/react-router";
 
 const manualMarkdown = `
 ## How I think about the world:
@@ -100,11 +100,11 @@ const manualMarkdown = `
 * I played ultimate in college. I haven't played much lately, but I still love throwing things, and I'm getting into disc golf.
 * The California coast is my favorite place.
 
-`
+`;
 
-export const Route = createFileRoute('/about/user-manual')({
+export const Route = createFileRoute("/about/user-manual")({
   component: UserManual,
-})
+});
 
 function UserManual() {
   return (
@@ -115,18 +115,18 @@ function UserManual() {
       <Markdown
         components={{
           p(props) {
-            return <p className="mb-4">{props.children}</p>
+            return <p className="mb-4">{props.children}</p>;
           },
           ul(props) {
-            return <ul className="list-disc mb-4">{props.children}</ul>
+            return <ul className="list-disc mb-4">{props.children}</ul>;
           },
           li(props) {
-            return <li className="ml-8">{props.children}</li>
+            return <li className="ml-8">{props.children}</li>;
           },
         }}
       >
         {manualMarkdown}
       </Markdown>
     </div>
-  )
+  );
 }

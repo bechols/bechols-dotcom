@@ -15,7 +15,7 @@ jobs:
           script: |
             const deployment = context.payload.deployment;
             const ref = deployment.ref;
-            
+
             // Find PR for this ref/branch
             const { data: pulls } = await github.rest.pulls.list({
               owner: context.repo.owner,
@@ -23,7 +23,7 @@ jobs:
               head: `${context.repo.owner}:${ref}`,
               state: 'open'
             });
-            
+
             if (pulls.length > 0) {
               const pr = pulls[0];
               core.setOutput('pr_number', pr.number);
@@ -42,7 +42,7 @@ jobs:
             const prNumber = ${{ steps.find-pr.outputs.pr_number }};
             const branch = '${{ steps.find-pr.outputs.branch }}';
             const deploymentUrl = '${{ github.event.deployment_status.target_url }}';
-            
+
             const comment = `## 🚀 Vercel Preview Updated
 
             ✅ **Latest Preview:** ${deploymentUrl}

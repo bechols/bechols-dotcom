@@ -18,7 +18,7 @@ export default function Nav() {
         <NavigationMenuList className="flex-wrap justify-center gap-y-2">
           <NavigationMenuItem>
             <NavigationMenuLink asChild>
-              <Link 
+              <Link
                 to="/"
                 className={navigationMenuTriggerStyle()}
                 aria-label="Home"
@@ -29,7 +29,7 @@ export default function Nav() {
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink asChild>
-              <Link 
+              <Link
                 to="/about"
                 className={navigationMenuTriggerStyle()}
                 aria-label="About"
@@ -40,7 +40,7 @@ export default function Nav() {
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink asChild>
-              <Link 
+              <Link
                 to="/books"
                 className={navigationMenuTriggerStyle()}
                 aria-label="Books"
@@ -51,7 +51,7 @@ export default function Nav() {
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink asChild>
-              <Link 
+              <Link
                 to="/interesting"
                 className={navigationMenuTriggerStyle()}
                 aria-label="Interesting"

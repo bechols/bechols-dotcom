@@ -1,15 +1,15 @@
-import "./globals.css"
+import "./globals.css";
 import {
-    HeadContent,
-    Outlet,
-    Scripts,
-    createRootRoute,
-    Link,
-  } from "@tanstack/react-router"
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import Nav from "@/components/Nav"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Nav from "@/components/Nav";
 
 const commitSha = __GIT_COMMIT_SHA__;
 
@@ -53,15 +53,13 @@ function NotFound() {
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <Button asChild>
-              <Link to="/">
-                Go Home
-              </Link>
+              <Link to="/">Go Home</Link>
             </Button>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 export const Route = createRootRoute({
@@ -73,11 +71,9 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       { title: "Ben Echols" },
-      { name: "description", content: "Ben's personal site" }
+      { name: "description", content: "Ben's personal site" },
     ],
-    links: [
-      { rel: "icon", href: "/williams-favicon-32x32.png" }
-    ]
+    links: [{ rel: "icon", href: "/williams-favicon-32x32.png" }],
   }),
   component: RootLayout,
   notFoundComponent: NotFound,
@@ -91,11 +87,11 @@ export const Route = createRootRoute({
       },
     }),
   }),
-})
+});
 
 function RootLayout() {
-  const { queryClient } = Route.useRouteContext()
-  
+  const { queryClient } = Route.useRouteContext();
+
   return (
     <html lang="en" className="antialiased">
       <head>
@@ -116,5 +112,5 @@ function RootLayout() {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }

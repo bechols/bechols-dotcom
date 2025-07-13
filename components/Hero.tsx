@@ -1,7 +1,7 @@
 import { LibraryBig, Lightbulb, Rocket } from "lucide-react";
 import { AspectRatio } from "./ui/aspect-ratio";
 import { Button } from "./ui/button";
-import { Link } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router";
 
 export default function Hero() {
   return (
@@ -17,7 +17,9 @@ export default function Hero() {
           <Link to="/about" className="w-full">
             <Button variant="outline" className="w-full min-h-[3.5rem] px-6">
               <div className="flex justify-between items-center w-full gap-4">
-                <span className="text-left">Experience and how I like to work</span>
+                <span className="text-left">
+                  Experience and how I like to work
+                </span>
                 <Lightbulb className="h-6 w-6 flex-shrink-0" />
               </div>
             </Button>
@@ -41,7 +43,10 @@ export default function Hero() {
         </div>
       </div>
       <div className="w-full lg:w-[55%] xl:max-w-2xl">
-        <AspectRatio ratio={1.47} className="overflow-hidden bg-muted rounded-lg">
+        <AspectRatio
+          ratio={1.47}
+          className="overflow-hidden bg-muted rounded-lg"
+        >
           <img
             src={"/ben_and_liz_point_lobos.webp"}
             alt="Ben with his favorite person."
