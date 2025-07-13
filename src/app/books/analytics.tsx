@@ -53,7 +53,7 @@ const getAnalyticsData = createServerFn({
     FROM books b
     INNER JOIN reviews r ON b.goodreads_id = r.goodreads_id
     WHERE r.shelf = 'read'
-  `,
+  `
     )
     .get() as { count: number };
 
@@ -64,7 +64,7 @@ const getAnalyticsData = createServerFn({
     SELECT AVG(r.rating) as avg_rating
     FROM reviews r
     WHERE r.shelf = 'read' AND r.rating IS NOT NULL
-  `,
+  `
     )
     .get() as { avg_rating: number | null };
 
@@ -78,7 +78,7 @@ const getAnalyticsData = createServerFn({
     WHERE r.shelf = 'read' 
       AND COALESCE(date_read, date_started, date_added) IS NOT NULL
       AND substr(COALESCE(date_read, date_started, date_added), 1, 4) = ?
-  `,
+  `
     )
     .get(currentYear) as { count: number };
 
@@ -93,7 +93,7 @@ const getAnalyticsData = createServerFn({
     WHERE r.shelf = 'read' AND r.rating IS NOT NULL
     GROUP BY r.rating
     ORDER BY r.rating
-  `,
+  `
     )
     .all() as Array<{ rating: number; count: number }>;
 
@@ -110,7 +110,7 @@ const getAnalyticsData = createServerFn({
     GROUP BY b.author
     ORDER BY count DESC
     LIMIT 10
-  `,
+  `
     )
     .all() as Array<{ author: string; count: number }>;
 
@@ -127,7 +127,7 @@ const getAnalyticsData = createServerFn({
       AND COALESCE(date_read, date_started, date_added) IS NOT NULL
     GROUP BY COALESCE(date_read, date_started, date_added)
     ORDER BY COALESCE(date_read, date_started, date_added)
-  `,
+  `
     )
     .all() as Array<{ date_started: string; books: number }>;
 
@@ -141,7 +141,7 @@ const getAnalyticsData = createServerFn({
       AND COALESCE(date_read, date_started, date_added) IS NOT NULL
       AND substr(COALESCE(date_read, date_started, date_added), 1, 4) IS NOT NULL
     ORDER BY year
-  `,
+  `
     )
     .all() as Array<{ year: string }>;
 
@@ -171,54 +171,68 @@ function parseISODate(dateStr: string): Date | null {
   }
 }
 
+// Helper function to get ISO week number (1-53)
+function getISOWeekNumber(date: Date): number {
+  const target = new Date(date.valueOf());
+  const dayNumber = (date.getDay() + 6) % 7; // Make Monday = 0
+  target.setDate(target.getDate() - dayNumber + 3); // Thursday of the week
+  const firstThursday = target.valueOf();
+  target.setMonth(0, 1); // January 1st
+  if (target.getDay() !== 4) {
+    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7)); // First Thursday of year
+  }
+  return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000); // 604800000 = 7 * 24 * 3600 * 1000
+}
+
 // Helper function to aggregate reading activity by time period
 function aggregateReadingActivity(
   data: Array<{ date_started: string; books: number }>,
   interval: "week" | "month" | "year",
   startDate: Date,
-  endDate: Date,
+  endDate: Date
 ): Array<{ period: string; books: number; displayPeriod: string }> {
   const result: { [key: string]: number } = {};
   const now = new Date();
 
-  console.log('DEBUG aggregateReadingActivity:', { 
-    interval, 
-    startDate: startDate.toISOString(), 
-    endDate: endDate.toISOString(),
-    dataLength: data.length 
-  });
 
   // Adjust end date based on current time for month/week intervals
   let adjustedEndDate = new Date(endDate);
   if (interval === "month") {
-    // Don't show months beyond current month
-    const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (adjustedEndDate > currentMonth) {
-      adjustedEndDate = currentMonth;
+    // Don't show months beyond current month - include the entire current month
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+    if (adjustedEndDate > currentMonthEnd) {
+      adjustedEndDate = currentMonthEnd;
     }
   } else if (interval === "week") {
-    // Don't show weeks beyond current week (get Monday of current week)
-    const currentWeekMonday = new Date(now);
-    currentWeekMonday.setDate(now.getDate() - now.getDay() + 1);
-    currentWeekMonday.setHours(0, 0, 0, 0);
-    if (adjustedEndDate > currentWeekMonday) {
-      adjustedEndDate = currentWeekMonday;
+    // Don't show weeks beyond current week - include the entire current week
+    const currentWeekEnd = new Date(now);
+    currentWeekEnd.setDate(now.getDate() + (6 - now.getDay())); // End of current week (Saturday)
+    currentWeekEnd.setHours(23, 59, 59, 999);
+    if (adjustedEndDate > currentWeekEnd) {
+      adjustedEndDate = currentWeekEnd;
     }
   }
 
   // Filter and aggregate data
+  let includedCount = 0;
+  let excludedCount = 0;
+
   for (const item of data) {
     const date = parseISODate(item.date_started);
-    if (!date || date < startDate || date > adjustedEndDate) continue;
+    if (!date || date < startDate || date > adjustedEndDate) {
+      excludedCount++;
+      continue;
+    }
+    includedCount++;
 
     let key: string;
 
     switch (interval) {
       case "week": {
-        // Get Monday of the week
-        const monday = new Date(date);
-        monday.setDate(date.getDate() - date.getDay() + 1);
-        key = monday.toISOString().slice(0, 10);
+        // Use ISO week number: YYYY-WW format
+        const year = date.getFullYear();
+        const weekNumber = getISOWeekNumber(date);
+        key = `${year}-W${weekNumber.toString().padStart(2, "0")}`;
         break;
       }
       case "month": {
@@ -234,6 +248,7 @@ function aggregateReadingActivity(
     result[key] = (result[key] || 0) + item.books;
   }
 
+
   // Fill missing periods with zeros
   const periods: Array<{
     period: string;
@@ -241,13 +256,7 @@ function aggregateReadingActivity(
     displayPeriod: string;
   }> = [];
   const currentDate = new Date(startDate);
-  
-  console.log('DEBUG: Initial dates:', {
-    startDate: startDate.toISOString(),
-    adjustedEndDate: adjustedEndDate.toISOString(),
-    currentDate: currentDate.toISOString(),
-    currentDateYear: currentDate.getFullYear()
-  });
+
 
   while (currentDate <= adjustedEndDate) {
     let key: string;
@@ -255,21 +264,21 @@ function aggregateReadingActivity(
 
     switch (interval) {
       case "week": {
-        // Get Monday of the week
-        const monday = new Date(currentDate);
-        monday.setDate(currentDate.getDate() - currentDate.getDay() + 1);
-        key = monday.toISOString().slice(0, 10);
-        displayKey = monday.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        });
+        // Use ISO week number: YYYY-WW format
+        const year = currentDate.getFullYear();
+        const weekNumber = getISOWeekNumber(currentDate);
+        key = `${year}-W${weekNumber.toString().padStart(2, "0")}`;
+        displayKey = `Week ${weekNumber}, ${year}`;
         break;
       }
       case "month": {
         key = currentDate.toISOString().slice(0, 7);
         // Create date from the key to ensure consistency
-        const keyDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const keyDate = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          1
+        );
         displayKey = keyDate.toLocaleDateString("en-US", {
           month: "short",
           year: "numeric",
@@ -279,12 +288,6 @@ function aggregateReadingActivity(
       case "year": {
         key = currentDate.getFullYear().toString();
         displayKey = key;
-        console.log('DEBUG: Year period generation:', {
-          currentYear: currentDate.getFullYear(),
-          startYear: startDate.getFullYear(),
-          key,
-          shouldInclude: currentDate.getFullYear() >= startDate.getFullYear()
-        });
         break;
       }
     }
@@ -295,7 +298,6 @@ function aggregateReadingActivity(
       displayPeriod: displayKey,
     });
 
-    console.log('DEBUG: Added period:', { key, displayKey, books: result[key] || 0, currentDate: currentDate.toISOString() });
 
     // Increment the date AFTER processing the current period
     switch (interval) {
@@ -382,15 +384,15 @@ function Analytics() {
   const firstYear = data.availableYears[0] || currentYear - 2;
   const lastYear = Math.max(
     data.availableYears[data.availableYears.length - 1] || currentYear,
-    currentYear,
+    currentYear
   );
 
   // State for time controls
   const [timeInterval, setTimeInterval] = useState<"week" | "month" | "year">(
-    "month",
+    "month"
   );
   const [startYear, setStartYear] = useState(
-    Math.max(firstYear, lastYear - 2).toString(),
+    Math.max(firstYear, lastYear - 2).toString()
   );
   const [endYear, setEndYear] = useState(lastYear.toString());
 
@@ -398,42 +400,15 @@ function Analytics() {
   const startDate = new Date(parseInt(startYear), 0, 1); // Year, month (0-based), day
   const endDate = new Date(parseInt(endYear), 11, 31); // Year, month (0-based), day
 
-  console.log('DEBUG: User selections:', { startYear, endYear, timeInterval });
-  console.log('DEBUG: Calculated date range:', { startDate, endDate });
-  console.log('DEBUG: Selected interval and date range:', {
-    interval: timeInterval,
-    startYear,
-    endYear,
-    startDate: startDate.toISOString().slice(0, 10),
-    endDate: endDate.toISOString().slice(0, 10),
-    daysBetween: Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-  });
 
   // Process reading activity data
   const readingActivityProcessed = aggregateReadingActivity(
     data.readingActivity,
     timeInterval,
     startDate,
-    endDate,
+    endDate
   );
 
-  console.log('DEBUG: First few processed periods:', readingActivityProcessed.slice(0, 5));
-  console.log('DEBUG: Last few processed periods:', readingActivityProcessed.slice(-5));
-  console.log('DEBUG: Total periods in graph data:', readingActivityProcessed.length);
-  console.log('DEBUG: Graph data summary:', {
-    totalPeriods: readingActivityProcessed.length,
-    periodsWithBooks: readingActivityProcessed.filter(p => p.books > 0).length,
-    totalBooks: readingActivityProcessed.reduce((sum, p) => sum + p.books, 0),
-    dateRange: {
-      first: readingActivityProcessed[0]?.period,
-      last: readingActivityProcessed[readingActivityProcessed.length - 1]?.period
-    }
-  });
-  console.log('DEBUG: Data passed to LineChart:', {
-    dataLength: readingActivityProcessed.length,
-    allData: readingActivityProcessed,
-    chartDataKeys: readingActivityProcessed.length > 0 ? Object.keys(readingActivityProcessed[0]) : []
-  });
 
   // Transform rating distribution for stacked bar chart
   const ratingChartData = [
@@ -488,7 +463,7 @@ function Analytics() {
                     value={timeInterval}
                     onChange={(e) =>
                       setTimeInterval(
-                        e.target.value as "week" | "month" | "year",
+                        e.target.value as "week" | "month" | "year"
                       )
                     }
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -507,7 +482,7 @@ function Analytics() {
                   >
                     {Array.from(
                       { length: lastYear - firstYear + 1 },
-                      (_, i) => firstYear + i,
+                      (_, i) => firstYear + i
                     ).map((year) => (
                       <option key={year} value={year}>
                         {year}
@@ -524,7 +499,7 @@ function Analytics() {
                   >
                     {Array.from(
                       { length: lastYear - firstYear + 1 },
-                      (_, i) => firstYear + i,
+                      (_, i) => firstYear + i
                     ).map((year) => (
                       <option key={year} value={year}>
                         {year}
@@ -537,7 +512,10 @@ function Analytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={readingActivityProcessed}>
+              <LineChart
+                data={readingActivityProcessed}
+                margin={{ top: 30, right: 20, left: 20, bottom: 30 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="displayPeriod"
@@ -622,7 +600,7 @@ function Analytics() {
                   itemSorter={(item) => {
                     // Sort by rating value in descending order (5★ to 0★)
                     const rating = parseInt(
-                      item.dataKey?.toString().replace("★", "") ?? "0",
+                      item.dataKey?.toString().replace("★", "") ?? "0"
                     );
                     return -rating;
                   }}
