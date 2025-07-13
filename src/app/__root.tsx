@@ -57,16 +57,6 @@ function NotFound() {
                 Go Home
               </Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link to="/books">
-                Browse Books
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/about">
-                About Me
-              </Link>
-            </Button>
           </div>
         </CardContent>
       </Card>
