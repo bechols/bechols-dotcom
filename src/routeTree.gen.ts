@@ -8,261 +8,261 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './app/__root'
-import { Route as InterestingRouteImport } from './app/interesting'
-import { Route as BooksRouteImport } from './app/books'
-import { Route as AboutRouteImport } from './app/about'
-import { Route as IndexRouteImport } from './app/index'
-import { Route as BooksIndexRouteImport } from './app/books/index'
-import { Route as AboutIndexRouteImport } from './app/about/index'
-import { Route as BooksWantToReadRouteImport } from './app/books/want-to-read'
-import { Route as BooksExploreRouteImport } from './app/books/explore'
-import { Route as BooksAnalyticsRouteImport } from './app/books/analytics'
-import { Route as AboutUserManualRouteImport } from './app/about/user-manual'
-import { Route as AboutHowIGotIntoPmRouteImport } from './app/about/how-i-got-into-pm'
+import { Route as rootRouteImport } from "./app/__root";
+import { Route as InterestingRouteImport } from "./app/interesting";
+import { Route as BooksRouteImport } from "./app/books";
+import { Route as AboutRouteImport } from "./app/about";
+import { Route as IndexRouteImport } from "./app/index";
+import { Route as BooksIndexRouteImport } from "./app/books/index";
+import { Route as AboutIndexRouteImport } from "./app/about/index";
+import { Route as BooksWantToReadRouteImport } from "./app/books/want-to-read";
+import { Route as BooksExploreRouteImport } from "./app/books/explore";
+import { Route as BooksAnalyticsRouteImport } from "./app/books/analytics";
+import { Route as AboutUserManualRouteImport } from "./app/about/user-manual";
+import { Route as AboutHowIGotIntoPmRouteImport } from "./app/about/how-i-got-into-pm";
 
 const InterestingRoute = InterestingRouteImport.update({
-  id: '/interesting',
-  path: '/interesting',
+  id: "/interesting",
+  path: "/interesting",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const BooksRoute = BooksRouteImport.update({
-  id: '/books',
-  path: '/books',
+  id: "/books",
+  path: "/books",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+  id: "/about",
+  path: "/about",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const BooksIndexRoute = BooksIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => BooksRoute,
-} as any)
+} as any);
 const AboutIndexRoute = AboutIndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => AboutRoute,
-} as any)
+} as any);
 const BooksWantToReadRoute = BooksWantToReadRouteImport.update({
-  id: '/want-to-read',
-  path: '/want-to-read',
+  id: "/want-to-read",
+  path: "/want-to-read",
   getParentRoute: () => BooksRoute,
-} as any)
+} as any);
 const BooksExploreRoute = BooksExploreRouteImport.update({
-  id: '/explore',
-  path: '/explore',
+  id: "/explore",
+  path: "/explore",
   getParentRoute: () => BooksRoute,
-} as any)
+} as any);
 const BooksAnalyticsRoute = BooksAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+  id: "/analytics",
+  path: "/analytics",
   getParentRoute: () => BooksRoute,
-} as any)
+} as any);
 const AboutUserManualRoute = AboutUserManualRouteImport.update({
-  id: '/user-manual',
-  path: '/user-manual',
+  id: "/user-manual",
+  path: "/user-manual",
   getParentRoute: () => AboutRoute,
-} as any)
+} as any);
 const AboutHowIGotIntoPmRoute = AboutHowIGotIntoPmRouteImport.update({
-  id: '/how-i-got-into-pm',
-  path: '/how-i-got-into-pm',
+  id: "/how-i-got-into-pm",
+  path: "/how-i-got-into-pm",
   getParentRoute: () => AboutRoute,
-} as any)
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRouteWithChildren
-  '/books': typeof BooksRouteWithChildren
-  '/interesting': typeof InterestingRoute
-  '/about/how-i-got-into-pm': typeof AboutHowIGotIntoPmRoute
-  '/about/user-manual': typeof AboutUserManualRoute
-  '/books/analytics': typeof BooksAnalyticsRoute
-  '/books/explore': typeof BooksExploreRoute
-  '/books/want-to-read': typeof BooksWantToReadRoute
-  '/about/': typeof AboutIndexRoute
-  '/books/': typeof BooksIndexRoute
+  "/": typeof IndexRoute;
+  "/about": typeof AboutRouteWithChildren;
+  "/books": typeof BooksRouteWithChildren;
+  "/interesting": typeof InterestingRoute;
+  "/about/how-i-got-into-pm": typeof AboutHowIGotIntoPmRoute;
+  "/about/user-manual": typeof AboutUserManualRoute;
+  "/books/analytics": typeof BooksAnalyticsRoute;
+  "/books/explore": typeof BooksExploreRoute;
+  "/books/want-to-read": typeof BooksWantToReadRoute;
+  "/about/": typeof AboutIndexRoute;
+  "/books/": typeof BooksIndexRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/interesting': typeof InterestingRoute
-  '/about/how-i-got-into-pm': typeof AboutHowIGotIntoPmRoute
-  '/about/user-manual': typeof AboutUserManualRoute
-  '/books/analytics': typeof BooksAnalyticsRoute
-  '/books/explore': typeof BooksExploreRoute
-  '/books/want-to-read': typeof BooksWantToReadRoute
-  '/about': typeof AboutIndexRoute
-  '/books': typeof BooksIndexRoute
+  "/": typeof IndexRoute;
+  "/interesting": typeof InterestingRoute;
+  "/about/how-i-got-into-pm": typeof AboutHowIGotIntoPmRoute;
+  "/about/user-manual": typeof AboutUserManualRoute;
+  "/books/analytics": typeof BooksAnalyticsRoute;
+  "/books/explore": typeof BooksExploreRoute;
+  "/books/want-to-read": typeof BooksWantToReadRoute;
+  "/about": typeof AboutIndexRoute;
+  "/books": typeof BooksIndexRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/about': typeof AboutRouteWithChildren
-  '/books': typeof BooksRouteWithChildren
-  '/interesting': typeof InterestingRoute
-  '/about/how-i-got-into-pm': typeof AboutHowIGotIntoPmRoute
-  '/about/user-manual': typeof AboutUserManualRoute
-  '/books/analytics': typeof BooksAnalyticsRoute
-  '/books/explore': typeof BooksExploreRoute
-  '/books/want-to-read': typeof BooksWantToReadRoute
-  '/about/': typeof AboutIndexRoute
-  '/books/': typeof BooksIndexRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/about": typeof AboutRouteWithChildren;
+  "/books": typeof BooksRouteWithChildren;
+  "/interesting": typeof InterestingRoute;
+  "/about/how-i-got-into-pm": typeof AboutHowIGotIntoPmRoute;
+  "/about/user-manual": typeof AboutUserManualRoute;
+  "/books/analytics": typeof BooksAnalyticsRoute;
+  "/books/explore": typeof BooksExploreRoute;
+  "/books/want-to-read": typeof BooksWantToReadRoute;
+  "/about/": typeof AboutIndexRoute;
+  "/books/": typeof BooksIndexRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/about'
-    | '/books'
-    | '/interesting'
-    | '/about/how-i-got-into-pm'
-    | '/about/user-manual'
-    | '/books/analytics'
-    | '/books/explore'
-    | '/books/want-to-read'
-    | '/about/'
-    | '/books/'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/about"
+    | "/books"
+    | "/interesting"
+    | "/about/how-i-got-into-pm"
+    | "/about/user-manual"
+    | "/books/analytics"
+    | "/books/explore"
+    | "/books/want-to-read"
+    | "/about/"
+    | "/books/";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/interesting'
-    | '/about/how-i-got-into-pm'
-    | '/about/user-manual'
-    | '/books/analytics'
-    | '/books/explore'
-    | '/books/want-to-read'
-    | '/about'
-    | '/books'
+    | "/"
+    | "/interesting"
+    | "/about/how-i-got-into-pm"
+    | "/about/user-manual"
+    | "/books/analytics"
+    | "/books/explore"
+    | "/books/want-to-read"
+    | "/about"
+    | "/books";
   id:
-    | '__root__'
-    | '/'
-    | '/about'
-    | '/books'
-    | '/interesting'
-    | '/about/how-i-got-into-pm'
-    | '/about/user-manual'
-    | '/books/analytics'
-    | '/books/explore'
-    | '/books/want-to-read'
-    | '/about/'
-    | '/books/'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/about"
+    | "/books"
+    | "/interesting"
+    | "/about/how-i-got-into-pm"
+    | "/about/user-manual"
+    | "/books/analytics"
+    | "/books/explore"
+    | "/books/want-to-read"
+    | "/about/"
+    | "/books/";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRouteWithChildren
-  BooksRoute: typeof BooksRouteWithChildren
-  InterestingRoute: typeof InterestingRoute
+  IndexRoute: typeof IndexRoute;
+  AboutRoute: typeof AboutRouteWithChildren;
+  BooksRoute: typeof BooksRouteWithChildren;
+  InterestingRoute: typeof InterestingRoute;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/interesting': {
-      id: '/interesting'
-      path: '/interesting'
-      fullPath: '/interesting'
-      preLoaderRoute: typeof InterestingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/books': {
-      id: '/books'
-      path: '/books'
-      fullPath: '/books'
-      preLoaderRoute: typeof BooksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/books/': {
-      id: '/books/'
-      path: '/'
-      fullPath: '/books/'
-      preLoaderRoute: typeof BooksIndexRouteImport
-      parentRoute: typeof BooksRoute
-    }
-    '/about/': {
-      id: '/about/'
-      path: '/'
-      fullPath: '/about/'
-      preLoaderRoute: typeof AboutIndexRouteImport
-      parentRoute: typeof AboutRoute
-    }
-    '/books/want-to-read': {
-      id: '/books/want-to-read'
-      path: '/want-to-read'
-      fullPath: '/books/want-to-read'
-      preLoaderRoute: typeof BooksWantToReadRouteImport
-      parentRoute: typeof BooksRoute
-    }
-    '/books/explore': {
-      id: '/books/explore'
-      path: '/explore'
-      fullPath: '/books/explore'
-      preLoaderRoute: typeof BooksExploreRouteImport
-      parentRoute: typeof BooksRoute
-    }
-    '/books/analytics': {
-      id: '/books/analytics'
-      path: '/analytics'
-      fullPath: '/books/analytics'
-      preLoaderRoute: typeof BooksAnalyticsRouteImport
-      parentRoute: typeof BooksRoute
-    }
-    '/about/user-manual': {
-      id: '/about/user-manual'
-      path: '/user-manual'
-      fullPath: '/about/user-manual'
-      preLoaderRoute: typeof AboutUserManualRouteImport
-      parentRoute: typeof AboutRoute
-    }
-    '/about/how-i-got-into-pm': {
-      id: '/about/how-i-got-into-pm'
-      path: '/how-i-got-into-pm'
-      fullPath: '/about/how-i-got-into-pm'
-      preLoaderRoute: typeof AboutHowIGotIntoPmRouteImport
-      parentRoute: typeof AboutRoute
-    }
+    "/interesting": {
+      id: "/interesting";
+      path: "/interesting";
+      fullPath: "/interesting";
+      preLoaderRoute: typeof InterestingRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/books": {
+      id: "/books";
+      path: "/books";
+      fullPath: "/books";
+      preLoaderRoute: typeof BooksRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/about": {
+      id: "/about";
+      path: "/about";
+      fullPath: "/about";
+      preLoaderRoute: typeof AboutRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/books/": {
+      id: "/books/";
+      path: "/";
+      fullPath: "/books/";
+      preLoaderRoute: typeof BooksIndexRouteImport;
+      parentRoute: typeof BooksRoute;
+    };
+    "/about/": {
+      id: "/about/";
+      path: "/";
+      fullPath: "/about/";
+      preLoaderRoute: typeof AboutIndexRouteImport;
+      parentRoute: typeof AboutRoute;
+    };
+    "/books/want-to-read": {
+      id: "/books/want-to-read";
+      path: "/want-to-read";
+      fullPath: "/books/want-to-read";
+      preLoaderRoute: typeof BooksWantToReadRouteImport;
+      parentRoute: typeof BooksRoute;
+    };
+    "/books/explore": {
+      id: "/books/explore";
+      path: "/explore";
+      fullPath: "/books/explore";
+      preLoaderRoute: typeof BooksExploreRouteImport;
+      parentRoute: typeof BooksRoute;
+    };
+    "/books/analytics": {
+      id: "/books/analytics";
+      path: "/analytics";
+      fullPath: "/books/analytics";
+      preLoaderRoute: typeof BooksAnalyticsRouteImport;
+      parentRoute: typeof BooksRoute;
+    };
+    "/about/user-manual": {
+      id: "/about/user-manual";
+      path: "/user-manual";
+      fullPath: "/about/user-manual";
+      preLoaderRoute: typeof AboutUserManualRouteImport;
+      parentRoute: typeof AboutRoute;
+    };
+    "/about/how-i-got-into-pm": {
+      id: "/about/how-i-got-into-pm";
+      path: "/how-i-got-into-pm";
+      fullPath: "/about/how-i-got-into-pm";
+      preLoaderRoute: typeof AboutHowIGotIntoPmRouteImport;
+      parentRoute: typeof AboutRoute;
+    };
   }
 }
 
 interface AboutRouteChildren {
-  AboutHowIGotIntoPmRoute: typeof AboutHowIGotIntoPmRoute
-  AboutUserManualRoute: typeof AboutUserManualRoute
-  AboutIndexRoute: typeof AboutIndexRoute
+  AboutHowIGotIntoPmRoute: typeof AboutHowIGotIntoPmRoute;
+  AboutUserManualRoute: typeof AboutUserManualRoute;
+  AboutIndexRoute: typeof AboutIndexRoute;
 }
 
 const AboutRouteChildren: AboutRouteChildren = {
   AboutHowIGotIntoPmRoute: AboutHowIGotIntoPmRoute,
   AboutUserManualRoute: AboutUserManualRoute,
   AboutIndexRoute: AboutIndexRoute,
-}
+};
 
-const AboutRouteWithChildren = AboutRoute._addFileChildren(AboutRouteChildren)
+const AboutRouteWithChildren = AboutRoute._addFileChildren(AboutRouteChildren);
 
 interface BooksRouteChildren {
-  BooksAnalyticsRoute: typeof BooksAnalyticsRoute
-  BooksExploreRoute: typeof BooksExploreRoute
-  BooksWantToReadRoute: typeof BooksWantToReadRoute
-  BooksIndexRoute: typeof BooksIndexRoute
+  BooksAnalyticsRoute: typeof BooksAnalyticsRoute;
+  BooksExploreRoute: typeof BooksExploreRoute;
+  BooksWantToReadRoute: typeof BooksWantToReadRoute;
+  BooksIndexRoute: typeof BooksIndexRoute;
 }
 
 const BooksRouteChildren: BooksRouteChildren = {
@@ -270,16 +270,16 @@ const BooksRouteChildren: BooksRouteChildren = {
   BooksExploreRoute: BooksExploreRoute,
   BooksWantToReadRoute: BooksWantToReadRoute,
   BooksIndexRoute: BooksIndexRoute,
-}
+};
 
-const BooksRouteWithChildren = BooksRoute._addFileChildren(BooksRouteChildren)
+const BooksRouteWithChildren = BooksRoute._addFileChildren(BooksRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRouteWithChildren,
   BooksRoute: BooksRouteWithChildren,
   InterestingRoute: InterestingRoute,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();

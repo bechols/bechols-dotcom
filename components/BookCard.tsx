@@ -8,7 +8,6 @@ import type { BookInfo } from "@/src/types/book-types";
 import { Star } from "lucide-react";
 
 export function BookCard(bookInfo: BookInfo) {
-  console.log(bookInfo);
   return (
     <a
       href={bookInfo.link}

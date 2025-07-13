@@ -1,4 +1,5 @@
 import { type BookWithReview, getDatabase } from "./database";
+import type { BookInfo } from "@/src/types/book-types";
 
 export async function getCurrentlyReadingFromDB(): Promise<BookWithReview[]> {
   try {
@@ -163,8 +164,7 @@ export async function getWantToReadPaginatedFromDB(
   offset: number = 0,
   sortBy: "title" | "author" | "date_added" = "date_added",
   sortOrder: "asc" | "desc" = "desc",
-  titleFilter: string = "",
-  authorFilter: string = "",
+  searchFilter: string = "",
 ): Promise<{ books: BookWithReview[]; hasMore: boolean }> {
   try {
     const db = await getDatabase();
@@ -179,16 +179,11 @@ export async function getWantToReadPaginatedFromDB(
 
     // Build WHERE clause with filters
     let whereClause = "WHERE r.shelf = 'to-read'";
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
-    if (titleFilter) {
-      whereClause += " AND b.title LIKE ?";
-      params.push(`%${titleFilter}%`);
-    }
-
-    if (authorFilter) {
-      whereClause += " AND b.author LIKE ?";
-      params.push(`%${authorFilter}%`);
+    if (searchFilter) {
+      whereClause += " AND (b.title LIKE ? OR b.author LIKE ?)";
+      params.push(`%${searchFilter}%`, `%${searchFilter}%`);
     }
 
     // Build ORDER BY clause
@@ -225,11 +220,11 @@ export async function getWantToReadPaginatedFromDB(
       LIMIT ? OFFSET ?
     `);
 
-    const results = stmt.all(
+    const results = stmt.all([
       ...params,
       safeLimit + 1,
       safeOffset,
-    ) as BookWithReview[];
+    ]) as BookWithReview[];
     const hasMore = results.length > safeLimit;
     const books = hasMore ? results.slice(0, safeLimit) : results;
 
@@ -244,16 +239,7 @@ export async function getWantToReadPaginatedFromDB(
 }
 
 // Transform database format to match existing BookInfo interface
-export function transformDBBookToBookInfo(dbBook: BookWithReview): {
-  title: string;
-  author: string;
-  link: string;
-  imageURL: string;
-  rating?: number;
-  review?: string;
-  dateStarted?: string;
-  dateRead?: string;
-} {
+export function transformDBBookToBookInfo(dbBook: BookWithReview): BookInfo {
   return {
     title: dbBook.title,
     author: dbBook.author,
