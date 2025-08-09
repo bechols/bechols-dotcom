@@ -48,6 +48,36 @@ function log(message, forceShow = false) {
 const dbPath = resolve(process.cwd(), "public", "books.db");
 const db = new Database(dbPath);
 
+// Add integrity check and recovery
+function checkAndRepairDatabase() {
+  try {
+    // Check database integrity
+    const integrityResult = db.pragma('integrity_check');
+    if (integrityResult[0]?.integrity_check !== 'ok') {
+      console.error('❌ Database integrity check failed:', integrityResult);
+      
+      // Try to repair database
+      console.log('🔧 Attempting database repair...');
+      db.pragma('journal_mode = DELETE');
+      db.exec('VACUUM');
+      db.pragma('journal_mode = WAL');
+      
+      // Recheck integrity
+      const recheck = db.pragma('integrity_check');
+      if (recheck[0]?.integrity_check !== 'ok') {
+        throw new Error('Database repair failed - database is corrupted beyond repair');
+      }
+      console.log('✅ Database repaired successfully');
+    }
+  } catch (error) {
+    console.error('❌ Database integrity check failed:', error.message);
+    process.exit(1);
+  }
+}
+
+// Check database integrity on startup
+checkAndRepairDatabase();
+
 // Helper functions
 function safeExtract(value) {
   if (value === undefined || value === null || value === "") {
@@ -221,7 +251,7 @@ async function syncShelfData(shelf) {
 
   console.log(`📚 Total books fetched from API: ${allBooks.length}`);
 
-  // Now sync all the books to the database
+  // Now sync all the books to the database with transaction safety
   let syncedCount = 0;
   const insertBookStmt = db.prepare(`
     INSERT OR IGNORE INTO books (goodreads_id, title, author, isbn, image_url, description, pages, publication_year)
@@ -248,64 +278,48 @@ async function syncShelfData(shelf) {
     "SELECT id FROM books WHERE goodreads_id = ?",
   );
 
-  for (const element of allBooks) {
-    let bookData = null;
-    try {
-      const book = element.book?.[0];
-      const authors = book?.authors?.[0]?.author;
-      const author = Array.isArray(authors) ? authors[0] : authors;
+  // Wrap the entire sync operation in a transaction
+  const syncTransaction = db.transaction((books) => {
+    let count = 0;
+    for (const element of books) {
+      try {
+        const book = element.book?.[0];
+        const authors = book?.authors?.[0]?.author;
+        const author = Array.isArray(authors) ? authors[0] : authors;
 
-      bookData = {
-        goodreads_id: safeExtract(book?.id?.[0]?._ || book?.id?.[0]),
-        title: safeExtract(book?.title?.[0]),
-        author: safeExtract(author?.name?.[0]),
-        isbn: safeExtract(book?.isbn?.[0]),
-        image_url: safeExtract(book?.image_url?.[0]),
-        description: safeExtract(book?.description?.[0]),
-        pages: safeParseInt(book?.num_pages?.[0]),
-        publication_year: safeParseInt(book?.publication_year?.[0]),
-        shelf: safeExtract(element.shelves?.[0]?.shelf?.[0]?.$?.name) || shelf,
-        rating: safeParseInt(element.rating?.[0]),
-        review: safeExtract(element.body?.[0]),
-        date_added: formatDate(safeExtract(element.date_added?.[0])),
-        date_read: formatDate(safeExtract(element.read_at?.[0])),
-        date_started: formatDate(safeExtract(element.started_at?.[0])),
-        read_count: safeParseInt(element.read_count?.[0]) || 1,
-        owned: safeParseInt(element.owned?.[0]) || 0,
-      };
+        const bookData = {
+          goodreads_id: safeExtract(book?.id?.[0]?._ || book?.id?.[0]),
+          title: safeExtract(book?.title?.[0]),
+          author: safeExtract(author?.name?.[0]),
+          isbn: safeExtract(book?.isbn?.[0]),
+          image_url: safeExtract(book?.image_url?.[0]),
+          description: safeExtract(book?.description?.[0]),
+          pages: safeParseInt(book?.num_pages?.[0]),
+          publication_year: safeParseInt(book?.publication_year?.[0]),
+          shelf: safeExtract(element.shelves?.[0]?.shelf?.[0]?.$?.name) || shelf,
+          rating: safeParseInt(element.rating?.[0]),
+          review: safeExtract(element.body?.[0]),
+          date_added: formatDate(safeExtract(element.date_added?.[0])),
+          date_read: formatDate(safeExtract(element.read_at?.[0])),
+          date_started: formatDate(safeExtract(element.started_at?.[0])),
+          read_count: safeParseInt(element.read_count?.[0]) || 1,
+          owned: safeParseInt(element.owned?.[0]) || 0,
+        };
 
-      if (!bookData.goodreads_id || !bookData.title || !bookData.author) {
+        if (!bookData.goodreads_id || !bookData.title || !bookData.author) {
+          log(
+            `⏭️  Skipping book - missing required data: id=${bookData.goodreads_id}, title="${bookData.title}", author="${bookData.author}"`,
+          );
+          continue;
+        }
+
         log(
-          `⏭️  Skipping book - missing required data: id=${bookData.goodreads_id}, title="${bookData.title}", author="${bookData.author}"`,
+          `📖 Processing: "${bookData.title}" by ${bookData.author} (${bookData.goodreads_id})`,
         );
-        continue;
-      }
 
-      log(
-        `📖 Processing: "${bookData.title}" by ${bookData.author} (${bookData.goodreads_id})`,
-      );
-
-      // Insert or update book
-      const bookResult = insertBookStmt.run(
-        bookData.goodreads_id,
-        bookData.title,
-        bookData.author,
-        bookData.isbn,
-        bookData.image_url,
-        bookData.description,
-        bookData.pages,
-        bookData.publication_year,
-      );
-
-      log(
-        `📝 Book insert result: lastInsertRowid=${bookResult.lastInsertRowid}, changes=${bookResult.changes}`,
-      );
-
-      // Get book ID
-      let bookId = bookResult.lastInsertRowid;
-      if (!bookId) {
-        // Book already exists, update it and get the ID
-        updateBookStmt.run(
+        // Insert or update book
+        const bookResult = insertBookStmt.run(
+          bookData.goodreads_id,
           bookData.title,
           bookData.author,
           bookData.isbn,
@@ -313,49 +327,76 @@ async function syncShelfData(shelf) {
           bookData.description,
           bookData.pages,
           bookData.publication_year,
-          bookData.goodreads_id,
         );
-        const existingBook = getBookByGoodreadsIdStmt.get(
-          bookData.goodreads_id,
-        );
-        bookId = existingBook?.id;
-      }
 
-      if (bookData.goodreads_id) {
-        // Remove this book from any other shelves first
-        const deleteResult = deleteOtherShelvesStmt.run(
-          bookData.goodreads_id,
-          bookData.shelf,
-        );
-        log(`🗑️  Deleted ${deleteResult.changes} reviews from other shelves`);
-
-        // Insert/update review using goodreads_id directly
-        const reviewResult = insertReviewStmt.run(
-          bookData.goodreads_id,
-          bookData.shelf,
-          bookData.rating,
-          bookData.review,
-          bookData.date_added,
-          bookData.date_read,
-          bookData.date_started,
-          bookData.read_count,
-          bookData.owned,
-        );
         log(
-          `📊 Review insert result: lastInsertRowid=${reviewResult.lastInsertRowid}, changes=${reviewResult.changes}`,
+          `📝 Book insert result: lastInsertRowid=${bookResult.lastInsertRowid}, changes=${bookResult.changes}`,
         );
-        syncedCount++;
-      }
-    } catch (error) {
-      console.error(`❌ Error syncing book:`, error.message);
-      if (verbose) {
-        console.error(
-          `🔍 Book data that caused error:`,
-          JSON.stringify(bookData, null, 2),
-        );
-        console.error(`🔍 Full error:`, error);
+
+        // Get book ID
+        let bookId = bookResult.lastInsertRowid;
+        if (!bookId) {
+          // Book already exists, update it and get the ID
+          updateBookStmt.run(
+            bookData.title,
+            bookData.author,
+            bookData.isbn,
+            bookData.image_url,
+            bookData.description,
+            bookData.pages,
+            bookData.publication_year,
+            bookData.goodreads_id,
+          );
+          const existingBook = getBookByGoodreadsIdStmt.get(
+            bookData.goodreads_id,
+          );
+          bookId = existingBook?.id;
+        }
+
+        if (bookData.goodreads_id) {
+          // Remove this book from any other shelves first
+          const deleteResult = deleteOtherShelvesStmt.run(
+            bookData.goodreads_id,
+            bookData.shelf,
+          );
+          log(`🗑️  Deleted ${deleteResult.changes} reviews from other shelves`);
+
+          // Insert/update review using goodreads_id directly
+          const reviewResult = insertReviewStmt.run(
+            bookData.goodreads_id,
+            bookData.shelf,
+            bookData.rating,
+            bookData.review,
+            bookData.date_added,
+            bookData.date_read,
+            bookData.date_started,
+            bookData.read_count,
+            bookData.owned,
+          );
+          log(
+            `📊 Review insert result: lastInsertRowid=${reviewResult.lastInsertRowid}, changes=${reviewResult.changes}`,
+          );
+          count++;
+        }
+      } catch (error) {
+        console.error(`❌ Error syncing book:`, error.message);
+        if (verbose) {
+          console.error(`🔍 Book data that caused error:`, JSON.stringify(element, null, 2));
+          console.error(`🔍 Full error:`, error);
+        }
       }
     }
+    return count;
+  });
+
+  // Execute the transaction
+  try {
+    syncedCount = syncTransaction(allBooks);
+  } catch (error) {
+    console.error(`❌ Transaction failed:`, error.message);
+    // Try to repair database if transaction fails
+    checkAndRepairDatabase();
+    throw error;
   }
 
   console.log(`✅ Synced ${syncedCount} books to database`);

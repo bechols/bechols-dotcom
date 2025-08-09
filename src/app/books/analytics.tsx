@@ -171,17 +171,11 @@ function parseISODate(dateStr: string): Date | null {
   }
 }
 
-// Helper function to get ISO week number (1-53)
-function getISOWeekNumber(date: Date): number {
-  const target = new Date(date.valueOf());
-  const dayNumber = (date.getDay() + 6) % 7; // Make Monday = 0
-  target.setDate(target.getDate() - dayNumber + 3); // Thursday of the week
-  const firstThursday = target.valueOf();
-  target.setMonth(0, 1); // January 1st
-  if (target.getDay() !== 4) {
-    target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7)); // First Thursday of year
-  }
-  return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000); // 604800000 = 7 * 24 * 3600 * 1000
+// Helper function to get week number (simple approach)
+function getWeekNumber(date: Date): number {
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const pastDaysOfYear = (date.getTime() - startOfYear.getTime()) / 86400000; // 86400000 = 24 * 60 * 60 * 1000
+  return Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
 }
 
 // Helper function to aggregate reading activity by time period
@@ -214,16 +208,11 @@ function aggregateReadingActivity(
   }
 
   // Filter and aggregate data
-  let includedCount = 0;
-  let excludedCount = 0;
-
   for (const item of data) {
     const date = parseISODate(item.date_started);
     if (!date || date < startDate || date > adjustedEndDate) {
-      excludedCount++;
       continue;
     }
-    includedCount++;
 
     let key: string;
 
@@ -231,7 +220,7 @@ function aggregateReadingActivity(
       case "week": {
         // Use ISO week number: YYYY-WW format
         const year = date.getFullYear();
-        const weekNumber = getISOWeekNumber(date);
+        const weekNumber = getWeekNumber(date);
         key = `${year}-W${weekNumber.toString().padStart(2, "0")}`;
         break;
       }
