@@ -1,8 +1,8 @@
-name: Update Goodreads database every 4 days
+name: Update Goodreads database
 
 on:
   schedule:
-    - cron: "19 19 * * *"
+    - cron: "19 11 * * *"
 
   workflow_dispatch:
 
