@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createServerFn } from "@tanstack/react-start";
 import { fetchGoodreadsShelf } from "@/src/lib/goodreads-api";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 
 // Server function to get paginated want-to-read books
 const getWantToReadPaginated = createServerFn({
@@ -18,7 +18,7 @@ const getWantToReadPaginated = createServerFn({
 })
   .validator(
     (
-      input: unknown,
+      input: unknown
     ): {
       pageParam: number;
       sortBy: "title" | "author" | "date_added";
@@ -47,7 +47,7 @@ const getWantToReadPaginated = createServerFn({
         searchFilter:
           typeof params.searchFilter === "string" ? params.searchFilter : "",
       };
-    },
+    }
   )
   .handler(
     async ({
@@ -63,7 +63,7 @@ const getWantToReadPaginated = createServerFn({
           offset,
           sortBy,
           sortOrder,
-          searchFilter,
+          searchFilter
         );
 
         if (result.books.length > 0) {
@@ -76,7 +76,7 @@ const getWantToReadPaginated = createServerFn({
         // Fallback to API if database is empty (only first page)
         if (pageParam === 0) {
           console.log(
-            "Database empty, falling back to Goodreads API for want-to-read books",
+            "Database empty, falling back to Goodreads API for want-to-read books"
           );
           const apiBooks = await fetchGoodreadsShelf({
             shelf: "to-read",
@@ -89,7 +89,7 @@ const getWantToReadPaginated = createServerFn({
         console.error("Error fetching paginated want-to-read books:", error);
         return { books: [], nextCursor: null };
       }
-    },
+    }
   );
 
 export const Route = createFileRoute("/books/want-to-read")({
@@ -98,11 +98,12 @@ export const Route = createFileRoute("/books/want-to-read")({
 
 function WantToRead() {
   const [sortBy, setSortBy] = useState<"title" | "author" | "date_added">(
-    "date_added",
+    "date_added"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [searchFilter, setSearchFilter] = useState("");
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
+  const queryClient = useQueryClient();
 
   // Debounce the search input for better performance
   useEffect(() => {
@@ -135,6 +136,13 @@ function WantToRead() {
     getNextPageParam: (lastPage) => {
       return lastPage.nextCursor;
     },
+    // Offline-first configuration
+    staleTime: 60 * 60 * 1000, // 1 hour - data is fresh for 1 hour
+    gcTime: 24 * 60 * 60 * 1000, // 24 hours - keep cached data for 24 hours
+    placeholderData: (previousData) => previousData, // Show previous data while fetching
+    refetchOnMount: true, // Refetch when component mounts (if online)
+    refetchOnWindowFocus: false, // Don't refetch on window focus (already in default options)
+    networkMode: "offlineFirst", // Use cached data when offline, fetch when online
   });
 
   const wantToReadBooks =
@@ -151,12 +159,133 @@ function WantToRead() {
           void fetchNextPage();
         }
       },
-      { threshold: 1 },
+      { threshold: 1 }
     );
 
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // Background load all books for the current view when online
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return;
+
+    const preloadAllBooksForCurrentView = async () => {
+      // Only preload when online
+      if (!navigator.onLine) return;
+
+      // Preload for the CURRENT view (current sort/filter)
+      const currentQueryKey = [
+        "wantToRead",
+        sortBy,
+        sortOrder,
+        debouncedSearchFilter,
+      ];
+
+      // Check if we've already loaded all pages for this view
+      const currentQueryData = queryClient.getQueryData(currentQueryKey) as
+        | {
+            pages: Array<{ books: BookInfo[]; nextCursor: number | null }>;
+            pageParams: number[];
+          }
+        | undefined;
+
+      // Check if all pages are already loaded (no nextCursor on last page)
+      if (
+        currentQueryData?.pages.length &&
+        currentQueryData.pages[currentQueryData.pages.length - 1]
+          ?.nextCursor === null
+      ) {
+        return; // Already fully loaded
+      }
+
+      // Don't interfere if the query is actively fetching (user might be scrolling)
+      // But we can still preload in the background
+      const currentQueryState = queryClient.getQueryState(currentQueryKey);
+      // Continue even if pending - we'll just add to what's already loading
+
+      // Start background preload for current view
+      let pageParam = 0;
+      let hasMore = true;
+
+      // Get existing pages if any, and determine where to start
+      if (currentQueryData && currentQueryData.pages.length > 0) {
+        const lastPage =
+          currentQueryData.pages[currentQueryData.pages.length - 1];
+        if (lastPage.nextCursor !== null) {
+          pageParam = lastPage.nextCursor;
+        } else {
+          hasMore = false; // Already have all pages
+        }
+      }
+
+      while (hasMore) {
+        try {
+          const result = await getWantToReadPaginated({
+            data: {
+              pageParam,
+              sortBy,
+              sortOrder,
+              searchFilter: debouncedSearchFilter,
+            },
+          });
+
+          // Update cache incrementally as we load, merging with existing data
+          queryClient.setQueryData(currentQueryKey, (old: any) => {
+            if (!old) {
+              return {
+                pages: [result],
+                pageParams: [pageParam],
+              };
+            }
+            // Merge with existing pages, avoiding duplicates
+            const existingPageParams = new Set(old.pageParams || []);
+
+            // Only add if this page isn't already cached
+            if (!existingPageParams.has(pageParam)) {
+              return {
+                pages: [...(old.pages || []), result],
+                pageParams: [...(old.pageParams || []), pageParam],
+              };
+            }
+
+            // Page already exists, return unchanged
+            return old;
+          });
+
+          hasMore = result.nextCursor !== null;
+          if (hasMore && result.nextCursor !== null) {
+            pageParam = result.nextCursor;
+            // Small delay to avoid overwhelming the server
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error("Error preloading books:", error);
+          break;
+        }
+      }
+    };
+
+    // Start preload immediately when online (don't wait)
+    if (navigator.onLine) {
+      // Start immediately - don't delay
+      void preloadAllBooksForCurrentView();
+    }
+
+    // Also trigger preload when coming back online
+    const handleOnline = () => {
+      setTimeout(() => {
+        void preloadAllBooksForCurrentView();
+      }, 1000);
+    };
+
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [queryClient, sortBy, sortOrder, debouncedSearchFilter]);
 
   // Handle sort change
   const handleSort = (newSortBy: "title" | "author" | "date_added") => {
