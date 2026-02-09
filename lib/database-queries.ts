@@ -249,5 +249,7 @@ export function transformDBBookToBookInfo(dbBook: BookWithReview): BookInfo {
     review: dbBook.review ?? undefined,
     dateStarted: dbBook.date_started ?? undefined,
     dateRead: dbBook.date_read ?? undefined,
+    isbn: dbBook.isbn ?? undefined,
+    dateAdded: dbBook.date_added ?? undefined,
   };
 }

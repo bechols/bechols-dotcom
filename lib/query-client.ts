@@ -52,7 +52,7 @@ export function createPersistentQueryClient(): QueryClient {
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
-            gcTime: 24 * 60 * 60 * 1000, // 24 hours - keep cached data for 24 hours
+            gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days - keep cached data for 7 days
             refetchOnWindowFocus: false, // Don't refetch on window focus
             refetchOnReconnect: true, // Refetch when network reconnects
             retry: 1, // Retry once on failure
@@ -65,7 +65,7 @@ export function createPersistentQueryClient(): QueryClient {
       persistQueryClient({
         queryClient: clientQueryClient,
         persister,
-        maxAge: 24 * 60 * 60 * 1000, // Persist for 24 hours
+        maxAge: 7 * 24 * 60 * 60 * 1000, // Persist for 7 days
         buster: "", // Cache buster - can be used to invalidate cache
       });
     }
@@ -77,7 +77,7 @@ export function createPersistentQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 24 * 60 * 60 * 1000, // 24 hours
+        gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
         retry: 1,

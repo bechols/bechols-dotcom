@@ -1,0 +1,20 @@
+{
+  "name": "Ben's Books",
+  "short_name": "Books",
+  "start_url": "/books/want-to-read",
+  "display": "standalone",
+  "theme_color": "#500082",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
