@@ -38,6 +38,8 @@ export interface BookInfo {
   review?: string;
   dateStarted?: string;
   dateRead?: string;
+  isbn?: string;
+  dateAdded?: string;
 }
 
 export interface ShelfConfig {

@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Nav from "@/components/Nav";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { createPersistentQueryClient } from "@/lib/query-client";
 import { useEffect } from "react";
 
@@ -74,8 +75,13 @@ export const Route = createRootRoute({
       },
       { title: "Ben Echols" },
       { name: "description", content: "Ben's personal site" },
+      { name: "theme-color", content: "#500082" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
     ],
-    links: [{ rel: "icon", href: "/williams-favicon-32x32.png" }],
+    links: [
+      { rel: "icon", href: "/williams-favicon-32x32.png" },
+      { rel: "manifest", href: "/manifest.json" },
+    ],
   }),
   component: RootLayout,
   notFoundComponent: NotFound,
@@ -120,6 +126,7 @@ function RootLayout() {
             </div>
             <Footer />
           </div>
+          <OfflineIndicator />
         </QueryClientProvider>
         <Scripts />
       </body>
