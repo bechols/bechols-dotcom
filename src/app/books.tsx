@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Database, Eye, Heart } from "lucide-react";
+import { BarChart3, BookOpen, Database, Heart } from "lucide-react";
 import {
   Link,
   Outlet,
@@ -54,66 +54,29 @@ function BooksLayout() {
   // Determine active tab based on current route
   const getActiveTab = () => {
     const pathname = location.pathname;
-    if (pathname === "/books" || pathname === "/books/")
-      return "currently-reading";
+    if (pathname === "/books" || pathname === "/books/") return "read";
     if (pathname === "/books/want-to-read") return "want-to-read";
     if (pathname === "/books/analytics") return "analytics";
     if (pathname === "/books/explore") return "explore";
-    return "currently-reading";
+    return "read";
   };
 
   const activeTab = getActiveTab();
-
-  const handleTabChange = (value: string) => {
-    if (value === "recently-read") {
-      // Scroll to recently read section if on index page
-      if (
-        typeof window !== "undefined" &&
-        (location.pathname === "/books" || location.pathname === "/books/")
-      ) {
-        const element = window.document.getElementById("recently-read-section");
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth" });
-        }
-      }
-    }
-  };
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 md:px-8">
       <div className="pb-6">
         <h1 className="text-2xl md:text-3xl font-bold mb-4">Books</h1>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs value={activeTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
             <BookTabLink
-              value="currently-reading"
-              to="/books"
-              icon={Eye}
-              fullText="Currently Reading"
-              shortText="Current"
-              activeTab={activeTab}
-            />
-
-            <BookTabLink
-              value="recently-read"
+              value="read"
               to="/books"
               icon={BookOpen}
-              fullText="Recently Read"
-              shortText="Recent"
+              fullText="Read"
+              shortText="Read"
               activeTab={activeTab}
-              onClick={() => {
-                if (
-                  location.pathname === "/books" ||
-                  location.pathname === "/books/"
-                ) {
-                  handleTabChange("recently-read");
-                }
-              }}
             />
 
             <BookTabLink
