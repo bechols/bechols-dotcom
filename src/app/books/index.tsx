@@ -5,7 +5,7 @@ import {
   transformDBBookToBookInfo,
 } from "@/lib/database-queries";
 import { useEffect, useRef } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createServerFn } from "@tanstack/react-start";
 import type { BookInfo } from "@/src/types/book-types";
 import { fetchGoodreadsShelf } from "@/src/lib/goodreads-api";
@@ -92,7 +92,13 @@ export const Route = createFileRoute("/books/")({
 });
 
 function Books() {
-  const { currentBooks } = Route.useLoaderData();
+  const { currentBooks: loaderCurrentBooks } = Route.useLoaderData();
+
+  const { data: currentBooks = loaderCurrentBooks } = useQuery({
+    queryKey: ["currentBooks"],
+    queryFn: () => getCurrentBooks(),
+    initialData: loaderCurrentBooks,
+  });
 
   const {
     data: recentBooksData,
