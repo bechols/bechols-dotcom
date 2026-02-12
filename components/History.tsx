@@ -5,7 +5,7 @@ const currentWork = {
   position: "Director of Product, Temporal Cloud",
   company: "Temporal",
   link: "https://temporal.io",
-  years: "2024 - Present",
+  years: "2025 - Present",
 };
 
 const previousWork = [
@@ -13,55 +13,55 @@ const previousWork = [
     position: "Head of Product",
     company: "Lamini",
     link: "https://lamini.ai",
-    years: "2023 - 2024",
+    years: "2024 - 2024",
   },
   {
     position: "Co-founder and CEO",
     company: "Nemo",
     link: "https://www.youtube.com/watch?v=IEvZmzYIZQY",
-    years: "2022 - 2023",
+    years: "2022 - 2024",
   },
   {
     position: "Director of Product Management, Confluent Cloud",
     company: "Confluent",
     link: "https://www.confluent.io",
-    years: "2021 - 2022",
+    years: "2018 - 2022",
   },
   {
     position: "Director of Product Management, Data and Analytics",
     company: "HouseCanary",
     link: "https://www.housecanary.com",
-    years: "2020 - 2021",
+    years: "2017 - 2018",
   },
   {
     position: "Senior Product Manager, Bitbucket Cloud",
     company: "Atlassian",
     link: "https://www.atlassian.com",
-    years: "2019 - 2020",
+    years: "2016 - 2017",
   },
   {
     position: "Director of Product Management",
     company: "Originate",
     link: "https://www.originate.com",
-    years: "2018 - 2019",
+    years: "2014 - 2016",
   },
   {
     position: "Product Manager",
     company: "Location Labs",
     link: "https://www.locationlabs.com",
-    years: "2017 - 2018",
+    years: "2012 - 2014",
   },
   {
     position: "Research Training Consultant + Research Associate",
     company: "Forrester Research",
     link: "https://www.forrester.com",
-    years: "2016 - 2017",
+    years: "2009 - 2012",
   },
   {
     position: "BA in Philosophy + Cognitive Science concentration",
     company: "Williams College",
     link: "https://www.williams.edu",
-    years: "2012 - 2016",
+    years: "2003 - 2007",
   },
 ];
 
@@ -143,9 +143,7 @@ export default function History() {
       <div className="mb-10">
         <h1 className="text-2xl sm:text-3xl font-bold mb-3">Ben Echols</h1>
         <p className="text-muted-foreground text-lg leading-relaxed">
-          Product leader based in California. I like building things from zero
-          to one, understanding complex systems, and leaving things better than
-          I found them.
+          Product leader based in SF. I like understanding complex systems and scaling products for people who build stuff.
         </p>
       </div>
 
