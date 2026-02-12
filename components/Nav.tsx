@@ -61,39 +61,42 @@ export default function Nav() {
             </NavigationMenuLink>
           </NavigationMenuItem>
 
-          <NavigationMenuItem>
-            <NavigationMenuLink
-              className={navigationMenuTriggerStyle()}
-              href="mailto:benjamin.echols@gmail.com"
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="Email"
-            >
-              <SiGmail />
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink
-              className={navigationMenuTriggerStyle()}
-              href="https://linkedin.com/in/benechols"
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="LinkedIn"
-            >
-              <SiLinkedin />
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink
-              className={navigationMenuTriggerStyle()}
-              href="https://github.com/bechols"
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="GitHub"
-            >
-              <SiGithub />
-            </NavigationMenuLink>
-          </NavigationMenuItem>
+          {/* Social icons grouped together to wrap as one unit */}
+          <div className="flex shrink-0">
+            <NavigationMenuItem>
+              <NavigationMenuLink
+                className={navigationMenuTriggerStyle()}
+                href="mailto:benjamin.echols@gmail.com"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Email"
+              >
+                <SiGmail />
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuLink
+                className={navigationMenuTriggerStyle()}
+                href="https://linkedin.com/in/benechols"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="LinkedIn"
+              >
+                <SiLinkedin />
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuLink
+                className={navigationMenuTriggerStyle()}
+                href="https://github.com/bechols"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="GitHub"
+              >
+                <SiGithub />
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+          </div>
         </NavigationMenuList>
       </NavigationMenu>
     </div>

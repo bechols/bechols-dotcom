@@ -4,6 +4,7 @@ import {
   Outlet,
   createFileRoute,
   useLocation,
+  useNavigate,
 } from "@tanstack/react-router";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { LucideIcon } from "lucide-react";
@@ -32,18 +33,20 @@ function BookTabLink({
   onClick,
 }: BookTabLinkProps) {
   const isActive = activeTab === value;
+  const navigate = useNavigate();
 
   return (
-    <TabsTrigger value={value} asChild>
-      <Link
-        to={to}
-        className={`flex items-center gap-1.5 ${isActive ? "font-semibold bg-slate-100" : ""}`}
-        onClick={onClick}
-      >
-        <Icon className="h-4 w-4" />
-        <span className="hidden sm:inline">{fullText}</span>
-        <span className="sm:hidden">{shortText}</span>
-      </Link>
+    <TabsTrigger
+      value={value}
+      className={`flex items-center gap-1.5 ${isActive ? "font-semibold bg-slate-100" : ""}`}
+      onClick={() => {
+        navigate({ to });
+        onClick?.();
+      }}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="hidden sm:inline">{fullText}</span>
+      <span className="sm:hidden">{shortText}</span>
     </TabsTrigger>
   );
 }

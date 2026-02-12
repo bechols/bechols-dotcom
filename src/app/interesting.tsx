@@ -4,7 +4,6 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card";
-import Markdown from "react-markdown";
 import { createFileRoute } from "@tanstack/react-router";
 
 const interesting = [
@@ -163,6 +162,39 @@ export const Route = createFileRoute("/interesting")({
   component: Interesting,
 });
 
+function FormattedText({ text }: { text: string }) {
+  const sections = text.split(/\n\n+/);
+
+  return (
+    <>
+      {sections.map((section, idx) => {
+        // Check if this section is a bullet list
+        if (section.trim().startsWith("*")) {
+          const items = section
+            .split(/\n/)
+            .filter((line) => line.trim().startsWith("*"))
+            .map((line) => line.trim().substring(1).trim());
+
+          return (
+            <ul key={idx} className="list-disc ml-8 mb-4">
+              {items.map((item, itemIdx) => (
+                <li key={itemIdx}>{item}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        // Regular paragraph
+        return (
+          <p key={idx} className="mb-4">
+            {section.trim()}
+          </p>
+        );
+      })}
+    </>
+  );
+}
+
 function Interesting() {
   return (
     <div className="max-w-prose">
@@ -180,22 +212,8 @@ function Interesting() {
                 {entry.sourceName}
               </CardDescription>
               <CardContent className="pt-2">
-                <span className="text-sm list-disc prose">
-                  <Markdown
-                    components={{
-                      p(props) {
-                        return <p>{props.children}</p>;
-                      },
-                      ul(props) {
-                        return <ul className="list-disc">{props.children}</ul>;
-                      },
-                      li(props) {
-                        return <li className="ml-8">{props.children}</li>;
-                      },
-                    }}
-                  >
-                    {entry.text}
-                  </Markdown>
+                <span className="text-sm">
+                  <FormattedText text={entry.text} />
                 </span>
               </CardContent>
             </Card>
