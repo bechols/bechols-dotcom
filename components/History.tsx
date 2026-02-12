@@ -71,12 +71,14 @@ function TimelineEntry({
   link,
   years,
   isCurrent,
+  isLast,
 }: {
   position: string;
   company: string;
   link: string;
   years: string;
   isCurrent?: boolean;
+  isLast?: boolean;
 }) {
   return (
     <a
@@ -94,7 +96,7 @@ function TimelineEntry({
               : "bg-gray-300 group-hover:bg-gray-400"
           } transition-colors`}
         />
-        <div className="w-px flex-1 bg-gray-200" />
+        {!isLast && <div className="w-px flex-1 bg-gray-200" />}
       </div>
 
       {/* Content */}
@@ -125,6 +127,7 @@ function SubpageLink({
   return (
     <Link
       to={to}
+      from="/about"
       className="group flex items-center justify-between gap-4 rounded-lg border px-5 py-4 hover:bg-accent transition-colors"
     >
       <div className="min-w-0">
@@ -167,8 +170,12 @@ export default function History() {
           Experience
         </h2>
         <TimelineEntry {...currentWork} isCurrent />
-        {previousWork.map((work) => (
-          <TimelineEntry key={work.position} {...work} />
+        {previousWork.map((work, index) => (
+          <TimelineEntry
+            key={work.position}
+            {...work}
+            isLast={index === previousWork.length - 1}
+          />
         ))}
       </div>
     </div>

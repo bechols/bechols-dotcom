@@ -87,12 +87,13 @@ export const Route = createFileRoute("/books/")({
   component: Books,
   loader: async () => {
     const currentBooks = await getCurrentBooks();
-    return { currentBooks };
+    const firstPageRecentBooks = await getRecentBooksPaginated({ data: 0 });
+    return { currentBooks, firstPageRecentBooks };
   },
 });
 
 function Books() {
-  const { currentBooks: loaderCurrentBooks } = Route.useLoaderData();
+  const { currentBooks: loaderCurrentBooks, firstPageRecentBooks } = Route.useLoaderData();
 
   const { data: currentBooks = loaderCurrentBooks } = useQuery({
     queryKey: ["currentBooks"],
@@ -112,6 +113,10 @@ function Books() {
       return await getRecentBooksPaginated({ data: pageParam });
     },
     initialPageParam: 0,
+    initialData: {
+      pages: [firstPageRecentBooks],
+      pageParams: [0],
+    },
     getNextPageParam: (lastPage) => {
       return lastPage.nextCursor;
     },

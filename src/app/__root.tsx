@@ -76,7 +76,7 @@ export const Route = createRootRoute({
       { title: "Ben Echols" },
       { name: "description", content: "Ben's personal site" },
       { name: "theme-color", content: "#500082" },
-      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
       { rel: "icon", href: "/williams-favicon-32x32.png" },
