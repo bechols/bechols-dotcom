@@ -40,9 +40,14 @@ const getAllWantToRead = createServerFn({
 
 export const Route = createFileRoute("/books/want-to-read")({
   component: WantToRead,
+  loader: async () => {
+    const books = await getAllWantToRead();
+    return { books };
+  },
 });
 
 function WantToRead() {
+  const loaderData = Route.useLoaderData();
   const [sortBy, setSortBy] = useState<"title" | "author" | "date_added">(
     "date_added"
   );
@@ -51,12 +56,6 @@ function WantToRead() {
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
   const [displayCount, setDisplayCount] = useState(40);
   const [selectedGenre, setSelectedGenre] = useState<string>("");
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Track client-side hydration to avoid hydration mismatches
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // Debounce the search input
   useEffect(() => {
@@ -74,10 +73,9 @@ function WantToRead() {
   const { data: allBooks, status } = useQuery({
     queryKey: ["allWantToRead"],
     queryFn: async () => await getAllWantToRead(),
+    initialData: loaderData.books,
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days
-    networkMode: "offlineFirst",
-    refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
 
@@ -218,7 +216,7 @@ function WantToRead() {
         </div>
 
         {/* Genre filter dropdown with hierarchy */}
-        {isHydrated && Object.keys(genreHierarchy).length > 0 && (
+        {Object.keys(genreHierarchy).length > 0 && (
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <select
