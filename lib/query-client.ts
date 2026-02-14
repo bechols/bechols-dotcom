@@ -41,6 +41,9 @@ function createLocalStoragePersister() {
   };
 }
 
+// Build-time cache buster: changes on every deploy, invalidating stale localStorage
+const CACHE_BUSTER = typeof __GIT_COMMIT_SHA__ !== "undefined" ? __GIT_COMMIT_SHA__ : "";
+
 // Singleton QueryClient for client-side (with persistence)
 let clientQueryClient: QueryClient | null = null;
 
@@ -52,7 +55,7 @@ export function createPersistentQueryClient(): QueryClient {
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
-            gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days - keep cached data for 7 days
+            gcTime: 24 * 60 * 60 * 1000, // 24 hours - keep cached data for 1 day
             refetchOnWindowFocus: false, // Don't refetch on window focus
             refetchOnReconnect: true, // Refetch when network reconnects
             retry: 1, // Retry once on failure
@@ -65,8 +68,8 @@ export function createPersistentQueryClient(): QueryClient {
       persistQueryClient({
         queryClient: clientQueryClient,
         persister,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // Persist for 7 days
-        buster: "", // Cache buster - can be used to invalidate cache
+        maxAge: 24 * 60 * 60 * 1000, // Persist for 24 hours
+        buster: CACHE_BUSTER, // Invalidate cache on new deploys
       });
     }
     return clientQueryClient;
@@ -77,7 +80,7 @@ export function createPersistentQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days
+        gcTime: 24 * 60 * 60 * 1000, // 24 hours
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
         retry: 1,
