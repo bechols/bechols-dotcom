@@ -4,8 +4,8 @@ import Database from "better-sqlite3";
 import { resolve } from "path";
 
 // Configuration
-const RATE_LIMIT_MS = 1000; // 1 request per second to be polite
-const SEARCH_RATE_LIMIT_MS = 1500; // slightly slower for search endpoint
+const RATE_LIMIT_MS = 350; // ~3 requests per second (identified client limit)
+const SEARCH_RATE_LIMIT_MS = 350;
 const MAX_RETRIES = 2;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -51,7 +51,7 @@ async function fetchWithRetry(url, retries = MAX_RETRIES) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const response = await fetch(url, {
-        headers: { "User-Agent": "bechols-dotcom/1.0 (personal reading list)" },
+        headers: { "User-Agent": "PersonalSite (benjamin.echols@gmail.com)" },
       });
 
       if (response.status === 429) {
