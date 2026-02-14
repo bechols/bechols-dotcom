@@ -1,4 +1,4 @@
-import { ErrorComponent, ErrorComponentProps } from "@tanstack/react-router";
+import { ErrorComponentProps } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";

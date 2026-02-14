@@ -7,7 +7,7 @@ function createLocalStoragePersister() {
   const STORAGE_KEY = "REACT_QUERY_OFFLINE_CACHE";
 
   return {
-    persistClient: async (client: PersistedClient): Promise<void> => {
+    persistClient: (client: PersistedClient): void => {
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(client));
@@ -16,7 +16,7 @@ function createLocalStoragePersister() {
         }
       }
     },
-    restoreClient: async (): Promise<PersistedClient | undefined> => {
+    restoreClient: (): PersistedClient | undefined => {
       if (typeof window !== "undefined") {
         try {
           const cached = window.localStorage.getItem(STORAGE_KEY);
@@ -29,7 +29,7 @@ function createLocalStoragePersister() {
       }
       return undefined;
     },
-    removeClient: async (): Promise<void> => {
+    removeClient: (): void => {
       if (typeof window !== "undefined") {
         try {
           window.localStorage.removeItem(STORAGE_KEY);
@@ -65,7 +65,7 @@ export function createPersistentQueryClient(): QueryClient {
 
       // Set up persistence on client side
       const persister = createLocalStoragePersister();
-      persistQueryClient({
+      void persistQueryClient({
         queryClient: clientQueryClient,
         persister,
         maxAge: 24 * 60 * 60 * 1000, // Persist for 24 hours

@@ -255,7 +255,7 @@ function aggregateReadingActivity(
       case "week": {
         // Use ISO week number: YYYY-WW format
         const year = currentDate.getFullYear();
-        const weekNumber = getISOWeekNumber(currentDate);
+        const weekNumber = getWeekNumber(currentDate);
         key = `${year}-W${weekNumber.toString().padStart(2, "0")}`;
         displayKey = `Week ${weekNumber}, ${year}`;
         break;
