@@ -59,6 +59,8 @@ async function main() {
         description TEXT,
         pages INTEGER,
         publication_year INTEGER,
+        openlibrary_edition_key TEXT,
+        openlibrary_work_key TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);

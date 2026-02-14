@@ -62,6 +62,7 @@ export default tseslint.config(
         console: "readonly",
         process: "readonly",
         setTimeout: "readonly",
+        fetch: "readonly",
         URLSearchParams: "readonly",
         Date: "readonly",
         URL: "readonly",
