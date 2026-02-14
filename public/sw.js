@@ -2,7 +2,7 @@
 const CACHE_NAME = "bechols-dotcom-v1";
 
 // Install event - cache assets
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   console.log("[Service Worker] Installing...");
   // Force the waiting service worker to become the active service worker
   self.skipWaiting();

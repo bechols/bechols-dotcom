@@ -30,7 +30,7 @@ async function main() {
         // Remove corrupted database
         try {
           unlinkSync(dbPath);
-        } catch (unlinkError) {
+        } catch {
           // File might not exist, which is fine
         }
         // Create new database
