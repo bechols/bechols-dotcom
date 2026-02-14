@@ -23,6 +23,12 @@ export default tseslint.config(
         __GIT_COMMIT_SHA__: "readonly",
         fetch: "readonly",
         Buffer: "readonly",
+        window: "readonly",
+        navigator: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        document: "readonly",
+        IntersectionObserver: "readonly",
       },
     },
     rules: {
@@ -58,11 +64,27 @@ export default tseslint.config(
         setTimeout: "readonly",
         fetch: "readonly",
         URLSearchParams: "readonly",
+        Date: "readonly",
+        URL: "readonly",
       },
     },
     rules: {
       "prefer-const": "error",
       "no-var": "error",
+    },
+  },
+
+  // Service worker
+  {
+    files: ["public/sw.js"],
+    languageOptions: {
+      globals: {
+        self: "readonly",
+        caches: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+        Response: "readonly",
+      },
     },
   },
 );
