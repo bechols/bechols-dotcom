@@ -11,6 +11,8 @@ export type Book = {
   description?: string;
   pages?: number;
   publication_year?: number;
+  openlibrary_edition_key?: string;
+  openlibrary_work_key?: string;
   created_at: string;
 };
 
@@ -112,6 +114,8 @@ export async function initDatabase(): Promise<void> {
       description TEXT,
       pages INTEGER,
       publication_year INTEGER,
+      openlibrary_edition_key TEXT,
+      openlibrary_work_key TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
