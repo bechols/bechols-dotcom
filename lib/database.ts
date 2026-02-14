@@ -36,6 +36,7 @@ export type BookWithReview = Book & {
   date_started?: string;
   read_count: number;
   owned: number;
+  genres?: string[];
 };
 
 let db: Database.Database | null = null;

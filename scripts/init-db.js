@@ -82,12 +82,26 @@ async function main() {
       )
     `);
 
+    // Create book_genres table for genre/topic data from Goodreads
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS book_genres (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        goodreads_id TEXT NOT NULL,
+        genre TEXT NOT NULL,
+        position INTEGER DEFAULT 0,
+        FOREIGN KEY (goodreads_id) REFERENCES books(goodreads_id),
+        UNIQUE(goodreads_id, genre)
+      )
+    `);
+
     // Create indexes for better performance
     db.exec(`
       CREATE INDEX IF NOT EXISTS idx_books_goodreads_id ON books(goodreads_id);
       CREATE INDEX IF NOT EXISTS idx_reviews_goodreads_id ON reviews(goodreads_id);
       CREATE INDEX IF NOT EXISTS idx_reviews_shelf ON reviews(shelf);
       CREATE INDEX IF NOT EXISTS idx_reviews_date_read ON reviews(date_read);
+      CREATE INDEX IF NOT EXISTS idx_book_genres_goodreads_id ON book_genres(goodreads_id);
+      CREATE INDEX IF NOT EXISTS idx_book_genres_genre ON book_genres(genre);
     `);
 
     // Run integrity check after initialization

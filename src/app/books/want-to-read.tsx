@@ -4,7 +4,7 @@ import {
   transformDBBookToBookInfo,
 } from "@/lib/database-queries";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, SortAsc, SortDesc, Filter } from "lucide-react";
+import { Search, SortAsc, SortDesc, Filter, Tag } from "lucide-react";
 import type { BookInfo } from "@/src/types/book-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,8 @@ function WantToRead() {
   const [searchFilter, setSearchFilter] = useState("");
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
   const [displayCount, setDisplayCount] = useState(40);
+  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
+  const [showAllGenres, setShowAllGenres] = useState(false);
 
   // Debounce the search input
   useEffect(() => {
@@ -58,7 +60,7 @@ function WantToRead() {
   // Reset display count when filters change
   useEffect(() => {
     setDisplayCount(40);
-  }, [debouncedSearchFilter, sortBy, sortOrder]);
+  }, [debouncedSearchFilter, sortBy, sortOrder, selectedGenres]);
 
   const { data: allBooks, status } = useQuery({
     queryKey: ["allWantToRead"],
@@ -70,7 +72,25 @@ function WantToRead() {
     refetchOnWindowFocus: false,
   });
 
-  // Client-side search, sort, and filtering
+  // Compute available genres sorted by frequency
+  const availableGenres = useMemo(() => {
+    const genreCounts = new Map<string, number>();
+    for (const book of allBooks ?? []) {
+      for (const genre of book.genres ?? []) {
+        genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+      }
+    }
+    return [...genreCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([genre, count]) => ({ genre, count }));
+  }, [allBooks]);
+
+  const VISIBLE_GENRE_COUNT = 12;
+  const displayedGenres = showAllGenres
+    ? availableGenres
+    : availableGenres.slice(0, VISIBLE_GENRE_COUNT);
+
+  // Client-side search, sort, and genre filtering
   const filteredBooks = useMemo(() => {
     let books = allBooks ?? [];
 
@@ -82,6 +102,17 @@ function WantToRead() {
           b.title.toLowerCase().includes(lower) ||
           b.author.toLowerCase().includes(lower)
       );
+    }
+
+    // Filter by selected genres (AND logic — book must match all selected)
+    if (selectedGenres.size > 0) {
+      books = books.filter((b) => {
+        const bookGenres = new Set(b.genres ?? []);
+        for (const genre of selectedGenres) {
+          if (!bookGenres.has(genre)) return false;
+        }
+        return true;
+      });
     }
 
     // Sort
@@ -96,7 +127,7 @@ function WantToRead() {
     });
 
     return books;
-  }, [allBooks, debouncedSearchFilter, sortBy, sortOrder]);
+  }, [allBooks, debouncedSearchFilter, sortBy, sortOrder, selectedGenres]);
 
   // Virtual infinite scroll via displayCount
   const displayedBooks = filteredBooks.slice(0, displayCount);
@@ -130,12 +161,31 @@ function WantToRead() {
     }
   };
 
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres((prev) => {
+      const next = new Set(prev);
+      if (next.has(genre)) {
+        next.delete(genre);
+      } else {
+        next.add(genre);
+      }
+      return next;
+    });
+  };
+
   // Clear all filters
   const clearFilters = () => {
     setSearchFilter("");
     setSortBy("date_added");
     setSortOrder("desc");
+    setSelectedGenres(new Set());
   };
+
+  const hasActiveFilters =
+    searchFilter ||
+    sortBy !== "date_added" ||
+    sortOrder !== "desc" ||
+    selectedGenres.size > 0;
 
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -149,6 +199,48 @@ function WantToRead() {
             className="pl-10"
           />
         </div>
+
+        {/* Genre filter chips */}
+        {availableGenres.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Tag className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Genres
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {displayedGenres.map(({ genre, count }) => (
+                <button
+                  key={genre}
+                  onClick={() => toggleGenre(genre)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                    selectedGenres.has(genre)
+                      ? "bg-williams-purple text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {genre.replace(/-/g, " ")}
+                  <span
+                    className={`text-[10px] ${selectedGenres.has(genre) ? "text-white/70" : "text-gray-400"}`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              ))}
+              {availableGenres.length > VISIBLE_GENRE_COUNT && (
+                <button
+                  onClick={() => setShowAllGenres(!showAllGenres)}
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  {showAllGenres
+                    ? "Show less"
+                    : `+${availableGenres.length - VISIBLE_GENRE_COUNT} more`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Sort controls */}
         <div className="flex flex-wrap gap-2">
@@ -196,9 +288,7 @@ function WantToRead() {
           </Button>
 
           {/* Clear filters button */}
-          {(searchFilter ||
-            sortBy !== "date_added" ||
-            sortOrder !== "desc") && (
+          {hasActiveFilters && (
             <Button
               variant="ghost"
               size="sm"
@@ -219,17 +309,35 @@ function WantToRead() {
             key={`${bookInfo.title}-${index}`}
             className="border rounded-lg px-3 py-2 bg-white hover:bg-gray-50 transition-colors"
           >
-            <h3 className="font-medium text-sm leading-tight truncate">
-              <a
-                href={bookInfo.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                {bookInfo.title}
-              </a>
-            </h3>
-            <p className="text-xs text-gray-600 truncate">{bookInfo.author}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium text-sm leading-tight truncate">
+                  <a
+                    href={bookInfo.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    {bookInfo.title}
+                  </a>
+                </h3>
+                <p className="text-xs text-gray-600 truncate">
+                  {bookInfo.author}
+                </p>
+              </div>
+              {bookInfo.genres && bookInfo.genres.length > 0 && (
+                <div className="flex flex-wrap gap-1 shrink-0">
+                  {bookInfo.genres.slice(0, 2).map((genre) => (
+                    <span
+                      key={genre}
+                      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500"
+                    >
+                      {genre.replace(/-/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -250,8 +358,8 @@ function WantToRead() {
 
       {status === "success" && filteredBooks.length === 0 && (
         <div className="text-lg py-6">
-          {debouncedSearchFilter
-            ? "No books match your search."
+          {debouncedSearchFilter || selectedGenres.size > 0
+            ? "No books match your filters."
             : "No books found on your want-to-read list."}
         </div>
       )}

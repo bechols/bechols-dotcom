@@ -40,6 +40,7 @@ export interface BookInfo {
   dateRead?: string;
   isbn?: string;
   dateAdded?: string;
+  genres?: string[];
 }
 
 export interface ShelfConfig {

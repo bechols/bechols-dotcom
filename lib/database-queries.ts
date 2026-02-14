@@ -136,7 +136,7 @@ export async function getWantToReadFromDB(): Promise<BookWithReview[]> {
     }
 
     const stmt = db.prepare(`
-      SELECT 
+      SELECT
         b.*,
         r.shelf,
         r.rating,
@@ -152,7 +152,8 @@ export async function getWantToReadFromDB(): Promise<BookWithReview[]> {
       ORDER BY r.date_added DESC
     `);
 
-    return stmt.all() as BookWithReview[];
+    const books = stmt.all() as BookWithReview[];
+    return attachGenresToBooks(db, books);
   } catch (error) {
     console.error("Error fetching want to read books from database:", error);
     return [];
@@ -238,6 +239,47 @@ export async function getWantToReadPaginatedFromDB(
   }
 }
 
+// Attach genres from book_genres table to an array of books
+function attachGenresToBooks(
+  db: import("better-sqlite3").Database,
+  books: BookWithReview[],
+): BookWithReview[] {
+  if (books.length === 0) return books;
+
+  try {
+    const genreStmt = db.prepare(`
+      SELECT goodreads_id, genre
+      FROM book_genres
+      WHERE genre != '_none'
+      ORDER BY position ASC
+    `);
+
+    const allGenres = genreStmt.all() as {
+      goodreads_id: string;
+      genre: string;
+    }[];
+
+    // Group genres by goodreads_id
+    const genreMap = new Map<string, string[]>();
+    for (const row of allGenres) {
+      const existing = genreMap.get(row.goodreads_id);
+      if (existing) {
+        existing.push(row.genre);
+      } else {
+        genreMap.set(row.goodreads_id, [row.genre]);
+      }
+    }
+
+    return books.map((book) => ({
+      ...book,
+      genres: genreMap.get(book.goodreads_id) ?? [],
+    }));
+  } catch {
+    // book_genres table might not exist yet
+    return books;
+  }
+}
+
 // Transform database format to match existing BookInfo interface
 export function transformDBBookToBookInfo(dbBook: BookWithReview): BookInfo {
   return {
@@ -251,5 +293,6 @@ export function transformDBBookToBookInfo(dbBook: BookWithReview): BookInfo {
     dateRead: dbBook.date_read ?? undefined,
     isbn: dbBook.isbn ?? undefined,
     dateAdded: dbBook.date_added ?? undefined,
+    genres: dbBook.genres ?? [],
   };
 }
