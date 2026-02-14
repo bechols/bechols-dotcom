@@ -9,7 +9,8 @@
     "lint": "npx eslint . --report-unused-disable-directives --max-warnings 0",
     "test:goodreads": "node scripts/test-goodreads.js",
     "db:init": "node scripts/init-db.js",
-    "check:shelf": "node scripts/check-shelf-sync.js"
+    "check:shelf": "node scripts/check-shelf-sync.js",
+    "sync:openlibrary": "node scripts/sync-openlibrary.js"
   },
   "dependencies": {
     "@radix-ui/react-aspect-ratio": "^1.1.7",

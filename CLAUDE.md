@@ -15,6 +15,7 @@ Personal website for Ben Echols built with TanStack Start (full-stack React on V
 - `node scripts/scrape-goodreads.js` - Full Goodreads data scrape to SQLite
 - `node scripts/sync-goodreads.js` - Incremental Goodreads sync
 - `node scripts/init-db.js` - Initialize database schema
+- `npm run sync:openlibrary` - Enrich read books with OpenLibrary references (flags: `--verbose`, `--dry-run`, `--force`)
 
 No test framework is configured.
 
@@ -62,6 +63,7 @@ const getData = createServerFn({ method: "GET" })
 - **Connection**: `lib/database.ts` — handles initialization and path resolution
 - **Vercel deployment**: Serverless functions can't read `public/` via filesystem. Production fetches the DB from `https://bechols.com/books.db` and writes to `/tmp/books.db`
 - **Fallback**: Database failures return empty data (no crashes); falls back to Goodreads API if DB is empty
+- **OpenLibrary enrichment**: `scripts/sync-openlibrary.js` enriches books with `openlibrary_edition_key` and `openlibrary_work_key` via the OpenLibrary API (ISBN lookup with search fallback). Run separately after Goodreads sync.
 
 ### State Management
 
