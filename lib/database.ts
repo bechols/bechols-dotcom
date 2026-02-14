@@ -60,8 +60,11 @@ export async function getDatabase(): Promise<Database.Database | null> {
       // Fallback: fetch from public URL (for Vercel)
       console.log("Local database not found, fetching from public URL...");
 
-      // Use absolute URL for reliable server-side fetch
-      const response = await fetch("https://bechols.com/books.db");
+      // Fetch from the same deployment's public directory
+      const baseUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "https://bechols.com";
+      const response = await fetch(`${baseUrl}/books.db`);
       console.log(
         "Fetch response status:",
         response.status,
