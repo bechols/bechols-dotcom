@@ -15,162 +15,9 @@ import { Book, CalendarDays, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import React, { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { getDatabase } from "@/lib/database";
-import {
-  getGenreAnalyticsFromDB,
-  type GenreAnalytics,
-} from "@/lib/database-queries";
-
-type AnalyticsData = {
-  totalBooks: number;
-  averageRating: number;
-  booksThisYear: number;
-  ratingDistribution: Array<{ rating: number; count: number }>;
-  topAuthors: Array<{ author: string; count: number }>;
-  readingActivity: Array<{ date_started: string; books: number }>;
-  availableYears: number[];
-  genreAnalytics: GenreAnalytics[];
-};
-
-const getAnalyticsData = createServerFn({
-  method: "GET",
-}).handler(async (): Promise<AnalyticsData> => {
-  const db = await getDatabase();
-
-  // If database is not available, return empty data
-  if (!db) {
-    console.warn("Database not available, returning empty analytics data");
-    return {
-      totalBooks: 0,
-      averageRating: 0,
-      booksThisYear: 0,
-      ratingDistribution: [],
-      topAuthors: [],
-      readingActivity: [],
-      availableYears: [],
-      genreAnalytics: [],
-    };
-  }
-
-  // Total books read
-  const totalBooksResult = db
-    .prepare(
-      `
-    SELECT COUNT(DISTINCT b.id) as count
-    FROM books b
-    INNER JOIN reviews r ON b.goodreads_id = r.goodreads_id
-    WHERE r.shelf = 'read'
-  `
-    )
-    .get() as { count: number };
-
-  // Average rating
-  const avgRatingResult = db
-    .prepare(
-      `
-    SELECT AVG(r.rating) as avg_rating
-    FROM reviews r
-    WHERE r.shelf = 'read' AND r.rating IS NOT NULL
-  `
-    )
-    .get() as { avg_rating: number | null };
-
-  // Books finished this year - use three-part fallback
-  const currentYear = new Date().getFullYear().toString();
-  const booksThisYear = db
-    .prepare(
-      `
-    SELECT COUNT(*) as count
-    FROM reviews r
-    WHERE r.shelf = 'read' 
-      AND COALESCE(date_read, date_started, date_added) IS NOT NULL
-      AND substr(COALESCE(date_read, date_started, date_added), 1, 4) = ?
-  `
-    )
-    .get(currentYear) as { count: number };
-
-  // Rating distribution
-  const ratingDistribution = db
-    .prepare(
-      `
-    SELECT 
-      r.rating,
-      COUNT(*) as count
-    FROM reviews r
-    WHERE r.shelf = 'read' AND r.rating IS NOT NULL
-    GROUP BY r.rating
-    ORDER BY r.rating
-  `
-    )
-    .all() as Array<{ rating: number; count: number }>;
-
-  // Top authors
-  const topAuthors = db
-    .prepare(
-      `
-    SELECT 
-      b.author,
-      COUNT(*) as count
-    FROM books b
-    INNER JOIN reviews r ON b.goodreads_id = r.goodreads_id
-    WHERE r.shelf = 'read'
-    GROUP BY b.author
-    ORDER BY count DESC
-    LIMIT 10
-  `
-    )
-    .all() as Array<{ author: string; count: number }>;
-
-  // Reading activity over time - get all data for flexible filtering
-  // Use three-part fallback: date_read (finished) -> date_started -> date_added
-  const readingActivity = db
-    .prepare(
-      `
-    SELECT 
-      COALESCE(date_read, date_started, date_added) as date_started,
-      COUNT(*) as books
-    FROM reviews r
-    WHERE r.shelf = 'read' 
-      AND COALESCE(date_read, date_started, date_added) IS NOT NULL
-    GROUP BY COALESCE(date_read, date_started, date_added)
-    ORDER BY COALESCE(date_read, date_started, date_added)
-  `
-    )
-    .all() as Array<{ date_started: string; books: number }>;
-
-  // Get available years from the data using same fallback logic
-  const availableYearsResult = db
-    .prepare(
-      `
-    SELECT DISTINCT substr(COALESCE(date_read, date_started, date_added), 1, 4) as year
-    FROM reviews r
-    WHERE r.shelf = 'read' 
-      AND COALESCE(date_read, date_started, date_added) IS NOT NULL
-      AND substr(COALESCE(date_read, date_started, date_added), 1, 4) IS NOT NULL
-    ORDER BY year
-  `
-    )
-    .all() as Array<{ year: string }>;
-
-  const availableYears = availableYearsResult
-    .map((row) => parseInt(row.year))
-    .filter((year) => !isNaN(year));
-
-  // Genre analytics
-  const genreAnalytics = await getGenreAnalyticsFromDB();
-
-  return {
-    totalBooks: totalBooksResult.count,
-    averageRating: avgRatingResult.avg_rating ?? 0,
-    booksThisYear: booksThisYear.count,
-    ratingDistribution,
-    topAuthors,
-    readingActivity,
-    availableYears,
-    genreAnalytics,
-  };
-});
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { type GenreAnalytics } from "@/lib/database-queries";
+import { analyticsQueryOptions } from "@/lib/book-queries";
 
 // Helper function to parse ISO date from database (e.g., "2024-01-15")
 function parseISODate(dateStr: string): Date | null {
@@ -409,9 +256,8 @@ function StatCard({
 
 export const Route = createFileRoute("/books/analytics")({
   component: Analytics,
-  loader: async () => {
-    const data = await getAnalyticsData();
-    return data;
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(analyticsQueryOptions());
   },
   errorComponent: ({ error, reset }) => (
     <div className="space-y-4">
@@ -441,7 +287,7 @@ export const Route = createFileRoute("/books/analytics")({
 });
 
 function Analytics() {
-  const data = Route.useLoaderData();
+  const { data } = useSuspenseQuery(analyticsQueryOptions());
 
   // Get dynamic year options
   const currentYear = new Date().getFullYear();

@@ -7,6 +7,8 @@ export function createRouter() {
     routeTree,
     scrollRestoration: true,
     defaultErrorComponent: CatchBoundary,
+    defaultPreload: "intent",
+    defaultPreloadStaleTime: 30_000,
   });
 
   return router;

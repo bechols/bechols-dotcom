@@ -1,53 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  getWantToReadFromDB,
-  transformDBBookToBookInfo,
-} from "@/lib/database-queries";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, SortAsc, SortDesc, Filter } from "lucide-react";
 import type { BookInfo } from "@/src/types/book-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createServerFn } from "@tanstack/react-start";
-import { fetchGoodreadsShelf } from "@/src/lib/goodreads-api";
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import {
   GENRE_HIERARCHY,
   formatGenreName,
 } from "@/lib/genre-hierarchy";
-
-// Server function to get ALL want-to-read books in one shot
-const getAllWantToRead = createServerFn({
-  method: "GET",
-}).handler(async (): Promise<BookInfo[]> => {
-  try {
-    const dbBooks = await getWantToReadFromDB();
-
-    if (dbBooks.length > 0) {
-      return dbBooks.map(transformDBBookToBookInfo);
-    }
-
-    // Fallback to API if database is empty
-    console.log(
-      "Database empty, falling back to Goodreads API for want-to-read books"
-    );
-    return await fetchGoodreadsShelf({ shelf: "to-read" });
-  } catch (error: unknown) {
-    console.error("Error fetching want-to-read books:", error);
-    return [];
-  }
-});
+import { wantToReadQueryOptions } from "@/lib/book-queries";
 
 export const Route = createFileRoute("/books/want-to-read")({
   component: WantToRead,
-  loader: async () => {
-    const books = await getAllWantToRead();
-    return { books };
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchQuery(wantToReadQueryOptions());
   },
 });
 
 function WantToRead() {
-  const loaderData = Route.useLoaderData();
+  const { data: allBooks } = useSuspenseQuery(wantToReadQueryOptions());
   const [sortBy, setSortBy] = useState<"title" | "author" | "date_added">(
     "date_added"
   );
@@ -69,15 +41,6 @@ function WantToRead() {
   useEffect(() => {
     setDisplayCount(40);
   }, [debouncedSearchFilter, sortBy, sortOrder, selectedGenre]);
-
-  const { data: allBooks, status } = useQuery({
-    queryKey: ["allWantToRead"],
-    queryFn: async () => await getAllWantToRead(),
-    initialData: loaderData.books,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days
-    refetchOnWindowFocus: false,
-  });
 
   // Group genres by parent category using the hierarchy
   const genreHierarchy = useMemo(() => {
@@ -336,13 +299,6 @@ function WantToRead() {
         ))}
       </div>
 
-      {/* Loading state */}
-      {status === "pending" && (
-        <div className="flex justify-center py-8">
-          <div className="text-lg">Loading books...</div>
-        </div>
-      )}
-
       {/* Infinite scroll trigger */}
       {hasMore && (
         <div ref={loadMoreRef} className="flex justify-center py-4">
@@ -350,7 +306,7 @@ function WantToRead() {
         </div>
       )}
 
-      {status === "success" && filteredBooks.length === 0 && (
+      {filteredBooks.length === 0 && (
         <div className="text-lg py-6">
           {debouncedSearchFilter || selectedGenre
             ? "No books match your filters."

@@ -1,103 +1,73 @@
-// Service Worker for offline support
-const CACHE_NAME = "bechols-dotcom-v1";
+// Service Worker — static-asset-only caching
+// React Query + localStorage persistence handles data caching;
+// this SW only caches the app shell (JS, CSS, fonts, images).
+const CACHE_NAME = "bechols-static-v2";
 
-// Install event - cache assets
+// File extensions to cache (Vite hashes these, so cache-first is safe)
+const STATIC_EXTENSIONS = [
+  ".js",
+  ".css",
+  ".woff2",
+  ".woff",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".svg",
+  ".ico",
+  ".webp",
+];
+
+function isStaticAsset(url) {
+  const pathname = new URL(url).pathname;
+  return STATIC_EXTENSIONS.some((ext) => pathname.endsWith(ext));
+}
+
+// Install — skip waiting to activate immediately
 self.addEventListener("install", () => {
-  console.log("[Service Worker] Installing...");
-  // Force the waiting service worker to become the active service worker
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate — clean up old caches (including the old catch-all v1 cache)
 self.addEventListener("activate", (event) => {
-  console.log("[Service Worker] Activating...");
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log("[Service Worker] Deleting old cache:", cacheName);
-            return caches.delete(cacheName);
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME) {
+            return caches.delete(name);
           }
         })
       );
     })
   );
-  // Take control of all pages immediately
   return self.clients.claim();
 });
 
-// Helper function to check if a request should be cached
-function shouldCache(request) {
-  const url = new URL(request.url);
-  
-  // Cache all same-origin requests (JS, CSS, images, API calls)
-  if (url.origin === self.location.origin) {
-    return true;
-  }
-  
-  // Don't cache external resources
-  return false;
-}
-
-// Fetch event - stale-while-revalidate strategy
-// Serve cached content immediately (fast/offline), update cache in background
+// Fetch — cache-first for static assets, network-only for everything else
 self.addEventListener("fetch", (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== "GET") {
-    return;
-  }
+  if (event.request.method !== "GET") return;
+  if (!event.request.url.startsWith("http")) return;
 
-  // Skip chrome-extension and other non-http requests
-  if (!event.request.url.startsWith("http")) {
-    return;
-  }
+  const url = new URL(event.request.url);
 
-  // Only cache same-origin requests
-  if (!shouldCache(event.request)) {
-    return;
-  }
+  // Only cache same-origin static assets
+  if (url.origin !== self.location.origin) return;
+  if (!isStaticAsset(event.request.url)) return;
 
+  // Cache-first: static assets have hashed filenames from Vite
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Always kick off a network fetch to update the cache for next time
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (
-            response &&
-            response.status === 200 &&
-            response.type !== "error"
-          ) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Network failed - that's fine, we already served from cache
-          return cachedResponse;
-        });
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
 
-      // Return cached version immediately if available, otherwise wait for network
-      return cachedResponse || networkFetch.then((response) => {
-        if (response) {
-          return response;
-        }
-        // Nothing in cache and network failed
-        if (event.request.mode === "navigate") {
-          return new Response("Offline - no cached page available", {
-            status: 503,
-            headers: { "Content-Type": "text/plain" },
+      return fetch(event.request).then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone);
           });
         }
-        return new Response("Network error", {
-          status: 408,
-          headers: { "Content-Type": "text/plain" },
-        });
+        return response;
       });
     })
   );
 });
-

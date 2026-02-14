@@ -58,18 +58,30 @@ const getData = createServerFn({ method: "GET" })
 ### Database
 
 - **SQLite** via `better-sqlite3`, stored at `public/books.db`
-- **Schema**: `books` table + `reviews` table (joined by `book_id`), with shelves: `currently-reading`, `read`, `to-read`
+- **Schema**: `books` table + `reviews` table (joined by `book_id`) + `book_genres` table, with shelves: `currently-reading`, `read`, `to-read`
 - **Query layer**: `lib/database-queries.ts` — async functions for all book data operations
 - **Connection**: `lib/database.ts` — handles initialization and path resolution
-- **Vercel deployment**: Serverless functions can't read `public/` via filesystem. Production fetches the DB from `https://bechols.com/books.db` and writes to `/tmp/books.db`
-- **Fallback**: Database failures return empty data (no crashes); falls back to Goodreads API if DB is empty
-- **OpenLibrary enrichment**: `scripts/sync-openlibrary.js` enriches books with `openlibrary_edition_key` and `openlibrary_work_key` via the OpenLibrary API (ISBN lookup with search fallback). Run separately after Goodreads sync.
+- **Vercel deployment**: Serverless functions can't read `public/` via filesystem. Three-layer fallback: local file → `VERCEL_URL` preview deployment → `bechols.com` production. Writes to `/tmp/books.db`
+- **Error pattern**: All query functions return empty arrays/data on failure, never throw. This prevents crashes in Vercel serverless where DB fetch might fail
+- **WAL checkpoint**: After modifying `books.db` locally, run `PRAGMA wal_checkpoint(TRUNCATE)` before committing. WAL data is invisible to Vercel serverless without checkpointing
+- **OpenLibrary enrichment**: `scripts/sync-openlibrary.js` enriches books with `openlibrary_edition_key` and `openlibrary_work_key` via the OpenLibrary API (ISBN lookup with search fallback). Run separately after Goodreads sync
+- **Genre enrichment pipeline** (run in order):
+  1. `node scripts/fetch-genres.js` — Scrape genres from Goodreads shelves
+  2. `node scripts/normalize-genres.js` — Apply manual mappings (e.g., "sci-fi" → "science-fiction")
+  3. `node scripts/consolidate-genres.js` — Merge via `lib/genre-hierarchy.ts` hierarchy
+  4. `node scripts/remove-infrequent-genres.js` — Drop genres below threshold
 
-### State Management
+### State Management & Caching
 
 - **React Query (TanStack Query v5)** with localStorage persistence (`lib/query-client.ts`)
-- Stale time: 5 min, cache time: 24 hours
+- Stale time: 5 min, cache time: 24 hours (heavy routes like want-to-read override to 1hr/7d)
 - Infinite scroll pagination for book lists using `useInfiniteQuery`
+- **Dual-layer caching**: Service worker (`public/sw.js`) caches HTTP responses (stale-while-revalidate); React Query persists query state to localStorage. Both invalidated by git commit SHA, not time
+- **Hydration rules** (violating these causes React error #418):
+  - Always pass `initialData` from loader to `useQuery`
+  - NEVER use `networkMode: "offlineFirst"` on routes with server-loaded data
+  - NEVER use `refetchOnMount: true` on routes with server-loaded data
+  - Use explicit `isHydrated` state (via `useEffect`) for client-only interactive elements like dropdowns
 
 ### Components
 
@@ -106,4 +118,6 @@ const getData = createServerFn({ method: "GET" })
 - Node.js 22+ required
 - Always use `public/books.db` as the database path (not `data/books.db`)
 - Route paths: use `/books/analytics` not `/books/analytics/`
-- Git commit SHA injected at build time via `vite.config.ts` (`__GIT_COMMIT_SHA__`)
+- Git commit SHA injected at build time via `vite.config.ts` (`__GIT_COMMIT_SHA__`) — used as React Query cache buster
+- Genre taxonomy is config-driven: `lib/genre-hierarchy.ts` is the single source of truth for both DB normalization scripts and UI rendering (genre dropdown optgroups)
+- Adding new browser/service-worker globals requires updating `eslint.config.js` globals section
