@@ -40,7 +40,7 @@ function shouldCache(request) {
   return false;
 }
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network-first strategy (try network, fall back to cache)
 self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
   if (event.request.method !== "GET") {
@@ -58,37 +58,33 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Return cached version if available
-      if (cachedResponse) {
-        return cachedResponse;
-      }
+    fetch(event.request)
+      .then((response) => {
+        // Don't cache if not a valid response
+        if (
+          !response ||
+          response.status !== 200 ||
+          response.type === "error"
+        ) {
+          return response;
+        }
 
-      // Otherwise fetch from network
-      return fetch(event.request)
-        .then((response) => {
-          // Don't cache if not a valid response
-          if (
-            !response ||
-            response.status !== 200 ||
-            response.type === "error"
-          ) {
-            return response;
+        // Clone the response and cache it
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return response;
+      })
+      .catch(() => {
+        // Network failed - fall back to cache
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
           }
 
-          // Clone the response
-          const responseToCache = response.clone();
-
-          // Cache the fetched response
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return response;
-        })
-        .catch(() => {
-          // If fetch fails and we're offline, try to return a cached version
-          // This helps with navigation requests
+          // No cache available
           if (event.request.mode === "navigate") {
             return caches.match("/").then((cached) => {
               return cached || new Response("Offline - no cached page available", {
@@ -97,13 +93,12 @@ self.addEventListener("fetch", (event) => {
               });
             });
           }
-          // For other requests, return a network error
           return new Response("Network error", {
             status: 408,
             headers: { "Content-Type": "text/plain" },
           });
         });
-    })
+      })
   );
 });
 
