@@ -1,5 +1,13 @@
 import { type BookWithReview, getDatabase } from "./database";
 import type { BookInfo } from "@/src/types/book-types";
+import { GENRE_HIERARCHY } from "./genre-hierarchy";
+
+export interface GenreAnalytics {
+  category: string; // Parent category name
+  books: number; // Number of books read
+  avgRating: number; // Average rating (1-5)
+  stdDev: number; // Standard deviation of ratings
+}
 
 export async function getCurrentlyReadingFromDB(): Promise<BookWithReview[]> {
   try {
@@ -136,7 +144,7 @@ export async function getWantToReadFromDB(): Promise<BookWithReview[]> {
     }
 
     const stmt = db.prepare(`
-      SELECT 
+      SELECT
         b.*,
         r.shelf,
         r.rating,
@@ -152,7 +160,8 @@ export async function getWantToReadFromDB(): Promise<BookWithReview[]> {
       ORDER BY r.date_added DESC
     `);
 
-    return stmt.all() as BookWithReview[];
+    const books = stmt.all() as BookWithReview[];
+    return attachGenresToBooks(db, books);
   } catch (error) {
     console.error("Error fetching want to read books from database:", error);
     return [];
@@ -238,6 +247,47 @@ export async function getWantToReadPaginatedFromDB(
   }
 }
 
+// Attach genres from book_genres table to an array of books
+function attachGenresToBooks(
+  db: import("better-sqlite3").Database,
+  books: BookWithReview[],
+): BookWithReview[] {
+  if (books.length === 0) return books;
+
+  try {
+    const genreStmt = db.prepare(`
+      SELECT goodreads_id, genre
+      FROM book_genres
+      WHERE genre != '_none'
+      ORDER BY position ASC
+    `);
+
+    const allGenres = genreStmt.all() as {
+      goodreads_id: string;
+      genre: string;
+    }[];
+
+    // Group genres by goodreads_id
+    const genreMap = new Map<string, string[]>();
+    for (const row of allGenres) {
+      const existing = genreMap.get(row.goodreads_id);
+      if (existing) {
+        existing.push(row.genre);
+      } else {
+        genreMap.set(row.goodreads_id, [row.genre]);
+      }
+    }
+
+    return books.map((book) => ({
+      ...book,
+      genres: genreMap.get(book.goodreads_id) ?? [],
+    }));
+  } catch {
+    // book_genres table might not exist yet
+    return books;
+  }
+}
+
 // Transform database format to match existing BookInfo interface
 export function transformDBBookToBookInfo(dbBook: BookWithReview): BookInfo {
   return {
@@ -251,5 +301,95 @@ export function transformDBBookToBookInfo(dbBook: BookWithReview): BookInfo {
     dateRead: dbBook.date_read ?? undefined,
     isbn: dbBook.isbn ?? undefined,
     dateAdded: dbBook.date_added ?? undefined,
+    genres: dbBook.genres ?? [],
   };
+}
+
+// Helper to find parent category for a genre
+function findParentCategory(genre: string): string | null {
+  for (const [parent, config] of Object.entries(GENRE_HIERARCHY)) {
+    if (config.children.includes(genre)) {
+      return parent;
+    }
+  }
+  return null;
+}
+
+// Get genre analytics data: average rating and book count per parent category
+export async function getGenreAnalyticsFromDB(): Promise<GenreAnalytics[]> {
+  try {
+    const db = await getDatabase();
+    if (!db) return [];
+
+    // Fetch all read books with genres and ratings
+    const stmt = db.prepare(`
+      SELECT
+        b.goodreads_id,
+        r.rating
+      FROM books b
+      INNER JOIN reviews r ON b.goodreads_id = r.goodreads_id
+      WHERE r.shelf = 'read'
+        AND r.rating IS NOT NULL
+        AND r.rating > 0
+    `);
+
+    const books = stmt.all() as Array<{ goodreads_id: string; rating: number }>;
+
+    // Attach genres to books
+    const booksWithGenres = attachGenresToBooks(db, books);
+
+    // Map genres to parent categories and aggregate
+    const categoryStats = new Map<
+      string,
+      { books: number; totalRating: number; ratings: number[] }
+    >();
+
+    for (const book of booksWithGenres) {
+      const genres = book.genres ?? [];
+      const parentCategories = new Set<string>();
+
+      // Map child genres to parent categories
+      for (const genre of genres) {
+        const parent = findParentCategory(genre);
+        if (parent) parentCategories.add(parent);
+      }
+
+      // Add book to each parent category
+      for (const parent of parentCategories) {
+        const stats = categoryStats.get(parent) ?? {
+          books: 0,
+          totalRating: 0,
+          ratings: [],
+        };
+        stats.books += 1;
+        stats.totalRating += book.rating;
+        stats.ratings.push(book.rating);
+        categoryStats.set(parent, stats);
+      }
+    }
+
+    // Calculate averages, standard deviations, and format for chart
+    return Array.from(categoryStats.entries())
+      .map(([category, stats]) => {
+        const avgRating = stats.totalRating / stats.books;
+        // Calculate standard deviation
+        const variance =
+          stats.ratings.reduce(
+            (sum, rating) => sum + Math.pow(rating - avgRating, 2),
+            0
+          ) / stats.books;
+        const stdDev = Math.sqrt(variance);
+
+        return {
+          category,
+          books: stats.books,
+          avgRating,
+          stdDev,
+        };
+      })
+      .filter((g) => g.books >= 5); // Show only categories with 5+ books to reduce noise
+  } catch (error) {
+    console.error("Error fetching genre analytics:", error);
+    return [];
+  }
 }

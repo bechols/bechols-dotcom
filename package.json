@@ -10,6 +10,7 @@
     "test:goodreads": "node scripts/test-goodreads.js",
     "db:init": "node scripts/init-db.js",
     "check:shelf": "node scripts/check-shelf-sync.js",
+    "fetch:genres": "node scripts/fetch-genres.js",
     "sync:openlibrary": "node scripts/sync-openlibrary.js"
   },
   "dependencies": {
