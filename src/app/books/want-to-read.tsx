@@ -51,6 +51,12 @@ function WantToRead() {
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
   const [displayCount, setDisplayCount] = useState(40);
   const [selectedGenre, setSelectedGenre] = useState<string>("");
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Track client-side hydration to avoid hydration mismatches
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Debounce the search input
   useEffect(() => {
@@ -212,7 +218,7 @@ function WantToRead() {
         </div>
 
         {/* Genre filter dropdown with hierarchy */}
-        {Object.keys(genreHierarchy).length > 0 && (
+        {isHydrated && Object.keys(genreHierarchy).length > 0 && (
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <select
