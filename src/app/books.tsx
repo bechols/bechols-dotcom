@@ -1,6 +1,5 @@
 import { BarChart3, BookOpen, Database, Heart } from "lucide-react";
 import {
-  Link,
   Outlet,
   createFileRoute,
   useLocation,
@@ -40,7 +39,7 @@ function BookTabLink({
       value={value}
       className={`flex items-center gap-1.5 ${isActive ? "font-semibold bg-slate-100" : ""}`}
       onClick={() => {
-        navigate({ to });
+        void navigate({ to });
         onClick?.();
       }}
     >
