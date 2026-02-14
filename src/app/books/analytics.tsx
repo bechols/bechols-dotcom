@@ -5,6 +5,8 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -15,6 +17,10 @@ import React, { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getDatabase } from "@/lib/database";
+import {
+  getGenreAnalyticsFromDB,
+  type GenreAnalytics,
+} from "@/lib/database-queries";
 
 type AnalyticsData = {
   totalBooks: number;
@@ -24,6 +30,7 @@ type AnalyticsData = {
   topAuthors: Array<{ author: string; count: number }>;
   readingActivity: Array<{ date_started: string; books: number }>;
   availableYears: number[];
+  genreAnalytics: GenreAnalytics[];
 };
 
 const getAnalyticsData = createServerFn({
@@ -42,6 +49,7 @@ const getAnalyticsData = createServerFn({
       topAuthors: [],
       readingActivity: [],
       availableYears: [],
+      genreAnalytics: [],
     };
   }
 
@@ -149,6 +157,9 @@ const getAnalyticsData = createServerFn({
     .map((row) => parseInt(row.year))
     .filter((year) => !isNaN(year));
 
+  // Genre analytics
+  const genreAnalytics = await getGenreAnalyticsFromDB();
+
   return {
     totalBooks: totalBooksResult.count,
     averageRating: avgRatingResult.avg_rating ?? 0,
@@ -157,6 +168,7 @@ const getAnalyticsData = createServerFn({
     topAuthors,
     readingActivity,
     availableYears,
+    genreAnalytics,
   };
 });
 
@@ -303,6 +315,69 @@ function aggregateReadingActivity(
   }
 
   return periods;
+}
+
+// Custom scatter shape with error bars
+interface ScatterShapeProps {
+  cx?: number;
+  cy?: number;
+  payload?: GenreAnalytics;
+}
+
+function ScatterWithErrorBars(props: ScatterShapeProps) {
+  const { cx, cy, payload } = props;
+
+  if (cx === undefined || cy === undefined || !payload) {
+    return null;
+  }
+
+  // Calculate pixel height per rating unit (assuming 5-star scale and 400px height)
+  // Y-axis goes from 0-5, chart height is 400px with margins
+  const chartHeight = 400 - 80; // 400px - top/bottom margins
+  const pixelsPerRating = chartHeight / 5;
+
+  // Calculate error bar positions in pixels
+  const errorBarHeight = payload.stdDev * pixelsPerRating;
+  const upperY = cy - errorBarHeight;
+  const lowerY = cy + errorBarHeight;
+  const capWidth = 8;
+
+  return (
+    <g>
+      {/* Error bar line */}
+      <line
+        x1={cx}
+        y1={upperY}
+        x2={cx}
+        y2={lowerY}
+        stroke="#8b5cf6"
+        strokeWidth={1.5}
+        opacity={0.5}
+      />
+      {/* Upper cap */}
+      <line
+        x1={cx - capWidth / 2}
+        y1={upperY}
+        x2={cx + capWidth / 2}
+        y2={upperY}
+        stroke="#8b5cf6"
+        strokeWidth={1.5}
+        opacity={0.5}
+      />
+      {/* Lower cap */}
+      <line
+        x1={cx - capWidth / 2}
+        y1={lowerY}
+        x2={cx + capWidth / 2}
+        y2={lowerY}
+        stroke="#8b5cf6"
+        strokeWidth={1.5}
+        opacity={0.5}
+      />
+      {/* Center dot */}
+      <circle cx={cx} cy={cy} r={6} fill="#8b5cf6" stroke="white" strokeWidth={2} />
+    </g>
+  );
 }
 
 function StatCard({
@@ -602,6 +677,90 @@ function Analytics() {
                 <Bar dataKey="5★" stackId="a" fill="#8b5cf6" />
               </BarChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Genre Analytics */}
+        <Card className="col-span-1 lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Genre Ratings vs Reading Volume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              Error bars show rating variance (standard deviation) within each category
+            </p>
+
+            {data.genreAnalytics.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={400}>
+                  <ScatterChart margin={{ top: 20, right: 30, bottom: 60, left: 60 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      type="number"
+                      dataKey="books"
+                      name="Books Read"
+                      label={{
+                        value: "Number of Books",
+                        position: "insideBottom",
+                        offset: -10,
+                      }}
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="avgRating"
+                      name="Average Rating"
+                      domain={[0, 5]}
+                      label={{
+                        value: "Average Rating",
+                        angle: -90,
+                        position: "insideLeft",
+                      }}
+                    />
+                    <Tooltip
+                      cursor={{ strokeDasharray: "3 3" }}
+                      content={({ active, payload }) => {
+                        if (!active || !payload || payload.length === 0) {
+                          return null;
+                        }
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                        const firstPayload = payload[0];
+                        if (
+                          !firstPayload ||
+                          typeof firstPayload !== "object" ||
+                          !("payload" in firstPayload)
+                        ) {
+                          return null;
+                        }
+                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+                        const data = firstPayload.payload as GenreAnalytics;
+                        return (
+                          <div className="bg-white p-3 border rounded shadow-lg">
+                            <p className="font-semibold">{data.category}</p>
+                            <p className="text-sm">Books: {data.books}</p>
+                            <p className="text-sm">
+                              Avg Rating: {data.avgRating.toFixed(2)}★
+                            </p>
+                            <p className="text-sm">
+                              Std Dev: ±{data.stdDev.toFixed(2)}
+                            </p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Scatter
+                      name="Genre Categories"
+                      data={data.genreAnalytics}
+                      fill="#8b5cf6"
+                      shape={(props: ScatterShapeProps) => <ScatterWithErrorBars {...props} />}
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No genre data available
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

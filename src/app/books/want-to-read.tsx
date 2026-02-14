@@ -4,13 +4,17 @@ import {
   transformDBBookToBookInfo,
 } from "@/lib/database-queries";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, SortAsc, SortDesc, Filter, Tag } from "lucide-react";
+import { Search, SortAsc, SortDesc, Filter } from "lucide-react";
 import type { BookInfo } from "@/src/types/book-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createServerFn } from "@tanstack/react-start";
 import { fetchGoodreadsShelf } from "@/src/lib/goodreads-api";
 import { useQuery } from "@tanstack/react-query";
+import {
+  GENRE_HIERARCHY,
+  formatGenreName,
+} from "@/lib/genre-hierarchy";
 
 // Server function to get ALL want-to-read books in one shot
 const getAllWantToRead = createServerFn({
@@ -34,8 +38,6 @@ const getAllWantToRead = createServerFn({
   }
 });
 
-const VISIBLE_GENRE_COUNT = 12;
-
 export const Route = createFileRoute("/books/want-to-read")({
   component: WantToRead,
 });
@@ -48,8 +50,7 @@ function WantToRead() {
   const [searchFilter, setSearchFilter] = useState("");
   const [debouncedSearchFilter, setDebouncedSearchFilter] = useState("");
   const [displayCount, setDisplayCount] = useState(40);
-  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
-  const [showAllGenres, setShowAllGenres] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<string>("");
 
   // Debounce the search input
   useEffect(() => {
@@ -62,7 +63,7 @@ function WantToRead() {
   // Reset display count when filters change
   useEffect(() => {
     setDisplayCount(40);
-  }, [debouncedSearchFilter, sortBy, sortOrder, selectedGenres]);
+  }, [debouncedSearchFilter, sortBy, sortOrder, selectedGenre]);
 
   const { data: allBooks, status } = useQuery({
     queryKey: ["allWantToRead"],
@@ -74,22 +75,38 @@ function WantToRead() {
     refetchOnWindowFocus: false,
   });
 
-  // Compute available genres sorted by frequency
-  const availableGenres = useMemo(() => {
+  // Group genres by parent category using the hierarchy
+  const genreHierarchy = useMemo(() => {
     const genreCounts = new Map<string, number>();
     for (const book of allBooks ?? []) {
       for (const genre of book.genres ?? []) {
         genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
       }
     }
-    return [...genreCounts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([genre, count]) => ({ genre, count }));
-  }, [allBooks]);
 
-  const displayedGenres = showAllGenres
-    ? availableGenres
-    : availableGenres.slice(0, VISIBLE_GENRE_COUNT);
+    // Organize genres into parent categories
+    const hierarchy: Record<
+      string,
+      { children: Array<{ genre: string; count: number }>; totalCount: number }
+    > = {};
+
+    for (const [parent, config] of Object.entries(GENRE_HIERARCHY)) {
+      const children = config.children
+        .map((genre) => ({
+          genre,
+          count: genreCounts.get(genre) ?? 0,
+        }))
+        .filter((g) => g.count > 0) // Only show genres with books
+        .sort((a, b) => b.count - a.count); // Sort by count within category
+
+      if (children.length > 0) {
+        const totalCount = children.reduce((sum, g) => sum + g.count, 0);
+        hierarchy[parent] = { children, totalCount };
+      }
+    }
+
+    return hierarchy;
+  }, [allBooks]);
 
   // Client-side search, sort, and genre filtering
   const filteredBooks = useMemo(() => {
@@ -105,15 +122,20 @@ function WantToRead() {
       );
     }
 
-    // Filter by selected genres (AND logic — book must match all selected)
-    if (selectedGenres.size > 0) {
-      books = books.filter((b) => {
-        const bookGenres = new Set(b.genres ?? []);
-        for (const genre of selectedGenres) {
-          if (!bookGenres.has(genre)) return false;
-        }
-        return true;
-      });
+    // Filter by selected genre (child genre or parent category)
+    if (selectedGenre) {
+      // Check if it's a parent category
+      const parentConfig = GENRE_HIERARCHY[selectedGenre];
+      if (parentConfig) {
+        // Filter by any child genre in this parent category
+        const childGenres = new Set(parentConfig.children);
+        books = books.filter((b) =>
+          (b.genres ?? []).some((g) => childGenres.has(g))
+        );
+      } else {
+        // Filter by specific child genre
+        books = books.filter((b) => (b.genres ?? []).includes(selectedGenre));
+      }
     }
 
     // Sort
@@ -128,7 +150,7 @@ function WantToRead() {
     });
 
     return books;
-  }, [allBooks, debouncedSearchFilter, sortBy, sortOrder, selectedGenres]);
+  }, [allBooks, debouncedSearchFilter, sortBy, sortOrder, selectedGenre]);
 
   // Virtual infinite scroll via displayCount
   const displayedBooks = filteredBooks.slice(0, displayCount);
@@ -162,31 +184,19 @@ function WantToRead() {
     }
   };
 
-  const toggleGenre = (genre: string) => {
-    setSelectedGenres((prev) => {
-      const next = new Set(prev);
-      if (next.has(genre)) {
-        next.delete(genre);
-      } else {
-        next.add(genre);
-      }
-      return next;
-    });
-  };
-
   // Clear all filters
   const clearFilters = () => {
     setSearchFilter("");
     setSortBy("date_added");
     setSortOrder("desc");
-    setSelectedGenres(new Set());
+    setSelectedGenre("");
   };
 
   const hasActiveFilters =
     searchFilter ||
     sortBy !== "date_added" ||
     sortOrder !== "desc" ||
-    selectedGenres.size > 0;
+    selectedGenre !== "";
 
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -201,45 +211,31 @@ function WantToRead() {
           />
         </div>
 
-        {/* Genre filter chips */}
-        {availableGenres.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Tag className="h-3.5 w-3.5 text-gray-500" />
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Genres
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {displayedGenres.map(({ genre, count }) => (
-                <button
-                  key={genre}
-                  onClick={() => toggleGenre(genre)}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                    selectedGenres.has(genre)
-                      ? "bg-williams-purple text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {genre.replace(/-/g, " ")}
-                  <span
-                    className={`text-[10px] ${selectedGenres.has(genre) ? "text-white/70" : "text-gray-400"}`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              ))}
-              {availableGenres.length > VISIBLE_GENRE_COUNT && (
-                <button
-                  onClick={() => setShowAllGenres(!showAllGenres)}
-                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  {showAllGenres
-                    ? "Show less"
-                    : `+${availableGenres.length - VISIBLE_GENRE_COUNT} more`}
-                </button>
+        {/* Genre filter dropdown with hierarchy */}
+        {Object.keys(genreHierarchy).length > 0 && (
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <select
+              value={selectedGenre}
+              onChange={(e) => setSelectedGenre(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-williams-purple focus:border-transparent"
+            >
+              <option value="">All genres</option>
+              {Object.entries(genreHierarchy).map(
+                ([parent, { children, totalCount }]) => (
+                  <optgroup key={parent} label={parent}>
+                    <option value={parent}>
+                      All {parent} ({totalCount})
+                    </option>
+                    {children.map(({ genre, count }) => (
+                      <option key={genre} value={genre}>
+                        {formatGenreName(genre)} ({count})
+                      </option>
+                    ))}
+                  </optgroup>
+                )
               )}
-            </div>
+            </select>
           </div>
         )}
 
@@ -327,16 +323,9 @@ function WantToRead() {
                 </p>
               </div>
               {bookInfo.genres && bookInfo.genres.length > 0 && (
-                <div className="flex flex-wrap gap-1 shrink-0">
-                  {bookInfo.genres.slice(0, 2).map((genre) => (
-                    <span
-                      key={genre}
-                      className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500"
-                    >
-                      {genre.replace(/-/g, " ")}
-                    </span>
-                  ))}
-                </div>
+                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 shrink-0">
+                  {formatGenreName(bookInfo.genres[0])}
+                </span>
               )}
             </div>
           </div>
@@ -359,7 +348,7 @@ function WantToRead() {
 
       {status === "success" && filteredBooks.length === 0 && (
         <div className="text-lg py-6">
-          {debouncedSearchFilter || selectedGenres.size > 0
+          {debouncedSearchFilter || selectedGenre
             ? "No books match your filters."
             : "No books found on your want-to-read list."}
         </div>
