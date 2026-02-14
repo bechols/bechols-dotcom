@@ -34,6 +34,8 @@ const getAllWantToRead = createServerFn({
   }
 });
 
+const VISIBLE_GENRE_COUNT = 12;
+
 export const Route = createFileRoute("/books/want-to-read")({
   component: WantToRead,
 });
@@ -85,7 +87,6 @@ function WantToRead() {
       .map(([genre, count]) => ({ genre, count }));
   }, [allBooks]);
 
-  const VISIBLE_GENRE_COUNT = 12;
   const displayedGenres = showAllGenres
     ? availableGenres
     : availableGenres.slice(0, VISIBLE_GENRE_COUNT);

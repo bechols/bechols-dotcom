@@ -89,6 +89,12 @@ const NON_GENRE_SHELVES = new Set([
   "want",
 ]);
 
+const CONFIG = {
+  MAX_GENRES_PER_BOOK: 5,
+  RATE_LIMIT_MS: 1000,
+  MIN_SHELF_NAME_LENGTH: 3,
+};
+
 // Rate limiting
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -139,7 +145,7 @@ function isGenreShelf(shelfName) {
   const lower = shelfName.toLowerCase().trim();
   if (NON_GENRE_SHELVES.has(lower)) return false;
   // Filter out shelves that are just numbers or very short
-  if (lower.length < 3) return false;
+  if (lower.length < CONFIG.MIN_SHELF_NAME_LENGTH) return false;
   // Filter out shelves with very personal naming patterns
   if (lower.startsWith("my-")) return false;
   if (lower.startsWith("to-")) return false;
@@ -147,6 +153,10 @@ function isGenreShelf(shelfName) {
 }
 
 async function fetchBookGenres(goodreadsId) {
+  if (!/^\d+$/.test(goodreadsId)) {
+    throw new Error(`Invalid goodreads ID: ${goodreadsId}`);
+  }
+
   const url = `https://www.goodreads.com/book/show/${goodreadsId}.xml`;
   const params = { key: GOODREADS_API_KEY };
 
@@ -177,7 +187,7 @@ async function fetchBookGenres(goodreadsId) {
           }))
           .filter((s) => isGenreShelf(s.name))
           .sort((a, b) => b.count - a.count)
-          .slice(0, 5) // Keep top 5 genres per book
+          .slice(0, CONFIG.MAX_GENRES_PER_BOOK)
           .map((s) => s.name);
 
         resolve(genres);
@@ -216,6 +226,15 @@ async function main() {
     "DELETE FROM book_genres WHERE goodreads_id = ?",
   );
 
+  const saveBookGenres = db.transaction((goodreadsId, genres) => {
+    if (forceRefresh) {
+      deleteStmt.run(goodreadsId);
+    }
+    for (let j = 0; j < genres.length; j++) {
+      insertStmt.run(goodreadsId, genres[j], j);
+    }
+  });
+
   let successCount = 0;
   let errorCount = 0;
 
@@ -229,14 +248,7 @@ async function main() {
       const genres = await fetchBookGenres(book.goodreads_id);
 
       if (genres.length > 0) {
-        // If force refreshing, clear existing genres first
-        if (forceRefresh) {
-          deleteStmt.run(book.goodreads_id);
-        }
-
-        for (let j = 0; j < genres.length; j++) {
-          insertStmt.run(book.goodreads_id, genres[j], j);
-        }
+        saveBookGenres(book.goodreads_id, genres);
         log(`   ✅ Stored ${genres.length} genres: ${genres.join(", ")}`);
         successCount++;
       } else {
@@ -245,15 +257,15 @@ async function main() {
         log(`   ⚠️  No genre data found`);
       }
 
-      // Rate limiting - 1 second between requests
+      // Rate limiting
       if (i < books.length - 1) {
-        await delay(1000);
+        await delay(CONFIG.RATE_LIMIT_MS);
       }
     } catch (error) {
       console.error(`   ❌ Error: ${error.message}`);
       errorCount++;
       // Continue with next book
-      await delay(1000);
+      await delay(CONFIG.RATE_LIMIT_MS);
     }
   }
 
