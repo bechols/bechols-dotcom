@@ -40,7 +40,8 @@ function shouldCache(request) {
   return false;
 }
 
-// Fetch event - network-first strategy (try network, fall back to cache)
+// Fetch event - stale-while-revalidate strategy
+// Serve cached content immediately (fast/offline), update cache in background
 self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
   if (event.request.method !== "GET") {
@@ -58,47 +59,45 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Don't cache if not a valid response
-        if (
-          !response ||
-          response.status !== 200 ||
-          response.type === "error"
-        ) {
-          return response;
-        }
-
-        // Clone the response and cache it
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
-        return response;
-      })
-      .catch(() => {
-        // Network failed - fall back to cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-
-          // No cache available
-          if (event.request.mode === "navigate") {
-            return caches.match("/").then((cached) => {
-              return cached || new Response("Offline - no cached page available", {
-                status: 503,
-                headers: { "Content-Type": "text/plain" },
-              });
+    caches.match(event.request).then((cachedResponse) => {
+      // Always kick off a network fetch to update the cache for next time
+      const networkFetch = fetch(event.request)
+        .then((response) => {
+          if (
+            response &&
+            response.status === 200 &&
+            response.type !== "error"
+          ) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
             });
           }
-          return new Response("Network error", {
-            status: 408,
+          return response;
+        })
+        .catch(() => {
+          // Network failed - that's fine, we already served from cache
+          return cachedResponse;
+        });
+
+      // Return cached version immediately if available, otherwise wait for network
+      return cachedResponse || networkFetch.then((response) => {
+        if (response) {
+          return response;
+        }
+        // Nothing in cache and network failed
+        if (event.request.mode === "navigate") {
+          return new Response("Offline - no cached page available", {
+            status: 503,
             headers: { "Content-Type": "text/plain" },
           });
+        }
+        return new Response("Network error", {
+          status: 408,
+          headers: { "Content-Type": "text/plain" },
         });
-      })
+      });
+    })
   );
 });
 
