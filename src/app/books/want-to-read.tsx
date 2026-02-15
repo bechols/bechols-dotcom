@@ -111,7 +111,11 @@ function WantToRead() {
         sortBy === "date_added"
           ? (a.dateAdded ?? "").localeCompare(b.dateAdded ?? "")
           : sortBy === "author"
-            ? a.author.localeCompare(b.author)
+            ? (() => {
+                const lastNameA = a.author.split(" ").pop() ?? a.author;
+                const lastNameB = b.author.split(" ").pop() ?? b.author;
+                return lastNameA.localeCompare(lastNameB) || a.author.localeCompare(b.author);
+              })()
             : a.title.localeCompare(b.title);
       return sortOrder === "desc" ? -cmp : cmp;
     });
