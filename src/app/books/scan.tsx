@@ -1,15 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, Download, RotateCcw, ScanLine } from "lucide-react";
+import { Camera, RotateCcw, ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { wantToReadQueryOptions } from "@/lib/book-queries";
 import {
-  checkWebGPUSupport,
-  isModelLoaded,
-  loadModel,
+  initWorker,
   scanBookshelf,
-} from "@/lib/vlm-scanner";
+  terminateWorker,
+} from "@/lib/ocr-scanner";
 import {
   parseExtractedBooks,
   matchBooksAgainstWantToRead,
@@ -23,21 +22,14 @@ export const Route = createFileRoute("/books/scan")({
   },
 });
 
-type ScanState =
-  | "idle"
-  | "loading-model"
-  | "camera-active"
-  | "scanning"
-  | "results";
+type ScanState = "idle" | "camera-active" | "scanning" | "results";
 
 function BookshelfScanner() {
   const { data: wantToReadBooks } = useSuspenseQuery(wantToReadQueryOptions());
   const [isHydrated, setIsHydrated] = useState(false);
   const [scanState, setScanState] = useState<ScanState>("idle");
   const [statusMessage, setStatusMessage] = useState("");
-  const [streamingText, setStreamingText] = useState("");
   const [matches, setMatches] = useState<ScanMatch[]>([]);
-  const [webGPUSupported, setWebGPUSupported] = useState<boolean | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -55,15 +47,15 @@ function BookshelfScanner() {
 
   useEffect(() => {
     setIsHydrated(true);
-    void checkWebGPUSupport().then(setWebGPUSupported);
   }, []);
 
-  // Cleanup camera on unmount
+  // Cleanup camera and worker on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
+      void terminateWorker();
     };
   }, []);
 
@@ -99,30 +91,8 @@ function BookshelfScanner() {
   }, []);
 
   const handleEnableCamera = useCallback(async () => {
-    if (!isModelLoaded()) {
-      setScanState("loading-model");
-      try {
-        await loadModel((msg) => setStatusMessage(msg));
-      } catch {
-        setStatusMessage("Failed to load model. Please try again.");
-        setScanState("idle");
-        return;
-      }
-    }
     await startCamera();
   }, [startCamera]);
-
-  const handlePreloadModel = useCallback(async () => {
-    setScanState("loading-model");
-    try {
-      await loadModel((msg) => setStatusMessage(msg));
-      setStatusMessage("Model ready! You can now enable the camera.");
-      setScanState("idle");
-    } catch {
-      setStatusMessage("Failed to load model. Please try again.");
-      setScanState("idle");
-    }
-  }, []);
 
   const handleScan = useCallback(async () => {
     if (!videoRef.current) return;
@@ -130,12 +100,11 @@ function BookshelfScanner() {
     // Pause the video to freeze the frame
     videoRef.current.pause();
     setScanState("scanning");
-    setStreamingText("");
+    setStatusMessage("");
 
     try {
-      const rawText = await scanBookshelf(videoRef.current, (text) => {
-        setStreamingText(text);
-      });
+      await initWorker((msg) => setStatusMessage(msg));
+      const rawText = await scanBookshelf(videoRef.current);
 
       const extracted = parseExtractedBooks(rawText);
       const results = matchBooksAgainstWantToRead(
@@ -156,7 +125,6 @@ function BookshelfScanner() {
 
   const handleScanAgain = useCallback(async () => {
     setMatches([]);
-    setStreamingText("");
     setStatusMessage("");
     await startCamera();
   }, [startCamera]);
@@ -165,23 +133,6 @@ function BookshelfScanner() {
     return (
       <div className="flex flex-col gap-4 pb-6">
         <p className="text-gray-500">Loading scanner...</p>
-      </div>
-    );
-  }
-
-  if (webGPUSupported === false) {
-    return (
-      <div className="flex flex-col gap-4 pb-6">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <h2 className="font-semibold text-amber-800 mb-2">
-            WebGPU Not Supported
-          </h2>
-          <p className="text-sm text-amber-700">
-            Your browser doesn&apos;t support WebGPU, which is required for
-            on-device AI inference. Try using Chrome 113+ or Edge 113+ on
-            desktop, or Chrome on Android.
-          </p>
-        </div>
       </div>
     );
   }
@@ -198,52 +149,25 @@ function BookshelfScanner() {
             <h2 className="font-semibold mb-2">Bookshelf Scanner</h2>
             <p className="text-sm text-gray-600 mb-3">
               Point your camera at a bookshelf to find books from your
-              want-to-read list. Uses an on-device AI model — works offline
-              after first download.
+              want-to-read list. Uses on-device OCR — no data leaves your
+              browser.
             </p>
             <p className="text-xs text-gray-400">
               {wantToReadBooks?.length ?? 0} books in your want-to-read list
-              {isModelLoaded() ? " · Model loaded" : ""}
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              onClick={() => void handleEnableCamera()}
-              className="flex items-center gap-2"
-            >
-              <Camera className="h-4 w-4" />
-              Enable Camera
-            </Button>
-            {!isModelLoaded() && (
-              <Button
-                variant="outline"
-                onClick={() => void handlePreloadModel()}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Pre-load Model
-              </Button>
-            )}
-          </div>
+          <Button
+            onClick={() => void handleEnableCamera()}
+            className="flex items-center gap-2 self-start"
+          >
+            <Camera className="h-4 w-4" />
+            Enable Camera
+          </Button>
 
           {statusMessage && (
             <p className="text-sm text-gray-600">{statusMessage}</p>
           )}
-        </div>
-      )}
-
-      {/* Loading model state */}
-      {scanState === "loading-model" && (
-        <div className="flex flex-col gap-4">
-          <div className="rounded-lg border bg-gray-50 p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-williams-purple" />
-              <p className="text-sm text-gray-600">
-                {statusMessage || "Loading model..."}
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -282,16 +206,12 @@ function BookshelfScanner() {
             </div>
           </div>
 
-          {streamingText && (
-            <div className="rounded-lg border bg-gray-50 p-3">
-              <p className="text-xs font-medium text-gray-500 mb-1">
-                Reading spines...
-              </p>
-              <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-                {streamingText}
-              </pre>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-williams-purple shrink-0" />
+            <p className="text-sm text-gray-600">
+              {statusMessage || "Scanning..."}
+            </p>
+          </div>
         </div>
       )}
 
@@ -348,7 +268,7 @@ function BookshelfScanner() {
           {unmatchedBooks.length > 0 && (
             <div>
               <h2 className="font-semibold text-gray-500 mb-2">
-                Other books detected ({unmatchedBooks.length})
+                Other text detected ({unmatchedBooks.length})
               </h2>
               <div className="space-y-1">
                 {unmatchedBooks.map((match, i) => (
@@ -373,7 +293,7 @@ function BookshelfScanner() {
           {matches.length === 0 && (
             <div className="rounded-lg border bg-gray-50 p-4">
               <p className="text-sm text-gray-600">
-                No books detected. Try getting closer to the shelf or improving
+                No text detected. Try getting closer to the shelf or improving
                 lighting.
               </p>
             </div>

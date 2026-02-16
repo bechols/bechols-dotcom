@@ -37,7 +37,8 @@ src/app/
 │   ├── index.tsx           → Currently reading + recently read
 │   ├── want-to-read.tsx    → Paginated with search/sort
 │   ├── analytics.tsx       → Reading analytics charts
-│   └── explore.tsx         → Datasette DB explorer
+│   ├── explore.tsx         → Datasette DB explorer
+│   └── scan.tsx            → Bookshelf scanner (camera + on-device OCR)
 ├── interesting.tsx         → /interesting
 └── globals.css
 ```
@@ -112,6 +113,13 @@ const getData = createServerFn({ method: "GET" })
 
 - Auto-PR creation on push to non-main branches (`.github/workflows/auto-pr.yml`)
 - Vercel preview URL posted as PR comment (`.github/workflows/vercel-preview-comment.yml`)
+
+### Bookshelf Scanner
+
+- `lib/ocr-scanner.ts` — Tesseract.js OCR worker for text recognition from camera frames. Dynamic import keeps `tesseract.js` out of the initial bundle
+- `lib/book-matcher.ts` — Parses OCR output and fuzzy-matches (Jaccard similarity) against want-to-read list
+- Engine: Tesseract.js v6 (~2MB WASM core + ~4MB eng language data), runs on any browser via WASM
+- Service worker preserves `transformers`-prefixed caches on update (harmless legacy check)
 
 ## Key Constraints
 

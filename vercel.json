@@ -1,3 +1,3 @@
 {
-  "buildCommand": "vite build && rm -rf .vercel/output/functions/__nitro.func/node_modules/onnxruntime-node .vercel/output/functions/__nitro.func/node_modules/@img .vercel/output/functions/__nitro.func/node_modules/sharp"
+  "buildCommand": "vite build"
 }
