@@ -41,6 +41,18 @@ function BookshelfScanner() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Ref callback: attach stream to video element when it mounts
+  const videoCallbackRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      (videoRef as any).current = el;
+      if (el && streamRef.current && !el.srcObject) {
+        el.srcObject = streamRef.current;
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     setIsHydrated(true);
     void checkWebGPUSupport().then(setWebGPUSupported);
@@ -240,7 +252,7 @@ function BookshelfScanner() {
         <div className="flex flex-col gap-4">
           <div className="relative w-full overflow-hidden rounded-lg bg-black">
             <video
-              ref={videoRef}
+              ref={videoCallbackRef}
               autoPlay
               muted
               playsInline
@@ -264,7 +276,7 @@ function BookshelfScanner() {
       {scanState === "scanning" && (
         <div className="flex flex-col gap-4">
           <div className="relative w-full overflow-hidden rounded-lg bg-black">
-            <video ref={videoRef} muted playsInline className="w-full" />
+            <video ref={videoCallbackRef} muted playsInline className="w-full" />
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
               <div className="h-8 w-8 animate-spin rounded-full border-3 border-white border-t-transparent" />
             </div>

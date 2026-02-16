@@ -49,8 +49,23 @@ export async function loadModel(
 
   onProgress?.("Downloading model (this may take a minute on first load)...");
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const progress_callback = onProgress ? (event: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    if (event.status === "progress" && event.total) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const pct = Math.round((Number(event.loaded) / Number(event.total)) * 100);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const name = String(event.file ?? "").split("/").pop() ?? "";
+      onProgress(`Downloading ${name}... ${pct}%`);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    } else if (event.status === "ready") {
+      onProgress("Initializing model...");
+    }
+  } : undefined;
+
   const [loadedProcessor, loadedModel, loadedTokenizer] = await Promise.all([
-    AutoProcessor.from_pretrained(MODEL_ID),
+    AutoProcessor.from_pretrained(MODEL_ID, { progress_callback }),
     AutoModelForImageTextToText.from_pretrained(MODEL_ID, {
       device: "webgpu",
       dtype: {
@@ -58,8 +73,9 @@ export async function loadModel(
         vision_encoder: "q4",
         decoder_model_merged: "q4",
       },
+      progress_callback,
     }),
-    AutoTokenizer.from_pretrained(MODEL_ID),
+    AutoTokenizer.from_pretrained(MODEL_ID, { progress_callback }),
   ]);
 
   processor = loadedProcessor;
