@@ -6,7 +6,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { wantToReadQueryOptions } from "@/lib/book-queries";
 import {
   initWorker,
-  scanBookshelf,
+  captureFrame,
+  recognizeFrame,
   terminateWorker,
 } from "@/lib/ocr-scanner";
 import {
@@ -47,6 +48,8 @@ function BookshelfScanner() {
 
   useEffect(() => {
     setIsHydrated(true);
+    // Pre-load OCR engine on mount so it's ready when user scans
+    void initWorker();
   }, []);
 
   // Cleanup camera and worker on unmount
@@ -97,14 +100,18 @@ function BookshelfScanner() {
   const handleScan = useCallback(async () => {
     if (!videoRef.current) return;
 
-    // Pause the video to freeze the frame
+    // Capture frame BEFORE changing state — the video element will stay
+    // mounted but we need the frame while it's still playing
     videoRef.current.pause();
+    const frameBlob = await captureFrame(videoRef.current);
+
     setScanState("scanning");
-    setStatusMessage("");
+    setStatusMessage("Scanning...");
 
     try {
+      // Ensure worker is ready (no-op if already loaded)
       await initWorker((msg) => setStatusMessage(msg));
-      const rawText = await scanBookshelf(videoRef.current);
+      const rawText = await recognizeFrame(frameBlob);
 
       const extracted = parseExtractedBooks(rawText);
       const results = matchBooksAgainstWantToRead(
@@ -139,6 +146,7 @@ function BookshelfScanner() {
 
   const matchedBooks = matches.filter((m) => m.confidence !== "none");
   const unmatchedBooks = matches.filter((m) => m.confidence === "none");
+  const showVideo = scanState === "camera-active" || scanState === "scanning";
 
   return (
     <div className="flex flex-col gap-4 pb-6">
@@ -171,8 +179,8 @@ function BookshelfScanner() {
         </div>
       )}
 
-      {/* Camera active state */}
-      {scanState === "camera-active" && (
+      {/* Single video element for both camera-active and scanning states */}
+      {showVideo && (
         <div className="flex flex-col gap-4">
           <div className="relative w-full overflow-hidden rounded-lg bg-black">
             <video
@@ -182,36 +190,33 @@ function BookshelfScanner() {
               playsInline
               className="w-full"
             />
+            {scanState === "scanning" && (
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-3 border-white border-t-transparent" />
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-center">
-            <button
-              onClick={() => void handleScan()}
-              className="h-16 w-16 rounded-full border-4 border-williams-purple bg-white flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 transition-colors"
-              aria-label="Scan bookshelf"
-            >
-              <ScanLine className="h-7 w-7 text-williams-purple" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Scanning state */}
-      {scanState === "scanning" && (
-        <div className="flex flex-col gap-4">
-          <div className="relative w-full overflow-hidden rounded-lg bg-black">
-            <video ref={videoCallbackRef} muted playsInline className="w-full" />
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-3 border-white border-t-transparent" />
+          {scanState === "camera-active" && (
+            <div className="flex justify-center">
+              <button
+                onClick={() => void handleScan()}
+                className="h-16 w-16 rounded-full border-4 border-williams-purple bg-white flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                aria-label="Scan bookshelf"
+              >
+                <ScanLine className="h-7 w-7 text-williams-purple" />
+              </button>
             </div>
-          </div>
+          )}
 
-          <div className="flex items-center gap-3">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-williams-purple shrink-0" />
-            <p className="text-sm text-gray-600">
-              {statusMessage || "Scanning..."}
-            </p>
-          </div>
+          {scanState === "scanning" && (
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-williams-purple shrink-0" />
+              <p className="text-sm text-gray-600">
+                {statusMessage || "Scanning..."}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

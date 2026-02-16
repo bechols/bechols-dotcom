@@ -27,14 +27,8 @@ export async function initWorker(onProgress?: ProgressCallback): Promise<void> {
   onProgress?.("OCR engine ready");
 }
 
-export async function scanBookshelf(
-  video: HTMLVideoElement,
-): Promise<string> {
-  if (!worker) {
-    throw new Error("Worker not initialized. Call initWorker() first.");
-  }
-
-  // Capture frame from video
+/** Capture a frame from a video element as a PNG Blob, downscaled to max 1280px wide. */
+export async function captureFrame(video: HTMLVideoElement): Promise<Blob> {
   const canvas = document.createElement("canvas");
   const scale = Math.min(1, 1280 / video.videoWidth);
   canvas.width = Math.round(video.videoWidth * scale);
@@ -42,10 +36,16 @@ export async function scanBookshelf(
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // Convert canvas to blob — tesseract.js v6 requires a Blob, not a raw canvas
-  const blob = await new Promise<Blob>((resolve, reject) => {
+  return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))), "image/png");
   });
+}
+
+/** Run OCR on a previously captured frame blob. */
+export async function recognizeFrame(blob: Blob): Promise<string> {
+  if (!worker) {
+    throw new Error("Worker not initialized. Call initWorker() first.");
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
   const result = await worker.recognize(blob);

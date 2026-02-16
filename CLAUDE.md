@@ -129,3 +129,4 @@ const getData = createServerFn({ method: "GET" })
 - Git commit SHA injected at build time via `vite.config.ts` (`__GIT_COMMIT_SHA__`) — used as React Query cache buster
 - Genre taxonomy is config-driven: `lib/genre-hierarchy.ts` is the single source of truth for both DB normalization scripts and UI rendering (genre dropdown optgroups)
 - Adding new browser/service-worker globals requires updating `eslint.config.js` globals section
+- Never force push (`git push --force` or `--force-with-lease`) without explicit user approval
