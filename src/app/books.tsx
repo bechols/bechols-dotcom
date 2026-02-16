@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Database, Heart } from "lucide-react";
+import { BarChart3, BookOpen, Database, Heart, ScanLine } from "lucide-react";
 import {
   Outlet,
   createFileRoute,
@@ -60,6 +60,7 @@ function BooksLayout() {
     if (pathname === "/books/want-to-read") return "want-to-read";
     if (pathname === "/books/analytics") return "analytics";
     if (pathname === "/books/explore") return "explore";
+    if (pathname === "/books/scan") return "scan";
     return "read";
   };
 
@@ -71,7 +72,7 @@ function BooksLayout() {
         <h1 className="text-2xl md:text-3xl font-bold mb-4">Books</h1>
 
         <Tabs value={activeTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <BookTabLink
               value="read"
               to="/books"
@@ -105,6 +106,15 @@ function BooksLayout() {
               icon={Database}
               fullText="Explore"
               shortText="DB"
+              activeTab={activeTab}
+            />
+
+            <BookTabLink
+              value="scan"
+              to="/books/scan"
+              icon={ScanLine}
+              fullText="Scan"
+              shortText="Scan"
               activeTab={activeTab}
             />
           </TabsList>

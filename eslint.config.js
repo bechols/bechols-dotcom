@@ -29,6 +29,9 @@ export default tseslint.config(
         clearTimeout: "readonly",
         document: "readonly",
         IntersectionObserver: "readonly",
+        MediaStream: "readonly",
+        HTMLVideoElement: "readonly",
+        HTMLCanvasElement: "readonly",
       },
     },
     rules: {
