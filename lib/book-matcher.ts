@@ -13,6 +13,7 @@ export interface ScanMatch {
   extracted: ExtractedBook;
   matched?: BookInfo;
   confidence: "high" | "medium" | "none";
+  score: number;
 }
 
 /** Normalize text for comparison: lowercase, strip punctuation, collapse whitespace */
@@ -22,6 +23,29 @@ function normalize(text: string): string {
     .replace(/[^\w\s]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Extract character 2-grams from normalized text */
+function bigramSet(text: string): Set<string> {
+  const n = normalize(text);
+  const bigrams = new Set<string>();
+  for (let i = 0; i < n.length - 1; i++) {
+    bigrams.add(n.slice(i, i + 2));
+  }
+  return bigrams;
+}
+
+/** Jaccard similarity over character bigram sets */
+function bigramSimilarity(a: string, b: string): number {
+  const setA = bigramSet(a);
+  const setB = bigramSet(b);
+  if (setA.size === 0 && setB.size === 0) return 0;
+  let intersection = 0;
+  for (const bg of setA) {
+    if (setB.has(bg)) intersection++;
+  }
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
 }
 
 /** Get set of words from normalized text */
@@ -74,7 +98,9 @@ export function matchBooksAgainstWantToRead(
 
     for (const book of wantToRead) {
       const bookTitleWords = wordSet(book.title);
-      let score = jaccardSimilarity(extTitleWords, bookTitleWords);
+      const wordScore = jaccardSimilarity(extTitleWords, bookTitleWords);
+      const bigramScore = bigramSimilarity(ext.title, book.title) * 0.85;
+      let score = Math.max(wordScore, bigramScore);
 
       // Author boost: if extracted has author and it overlaps with book author
       if (ext.author) {
@@ -105,6 +131,7 @@ export function matchBooksAgainstWantToRead(
       extracted: ext,
       matched: confidence !== "none" ? bestMatch : undefined,
       confidence,
+      score: bestScore,
     };
   });
 }

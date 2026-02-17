@@ -11,6 +11,7 @@ export interface OcrResult {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let ocr: any = null;
+let initPromise: Promise<void> | null = null;
 
 export function isOcrReady(): boolean {
   return ocr !== null;
@@ -19,18 +20,42 @@ export function isOcrReady(): boolean {
 export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
   if (ocr) return;
 
-  onProgress?.("Loading OCR models...");
-  const { default: Ocr } = await import("@gutenye/ocr-browser");
+  // Deduplicate concurrent init calls
+  if (initPromise) {
+    await initPromise;
+    return;
+  }
 
-  ocr = await Ocr.create({
-    models: {
-      detectionPath: "/models/ch_PP-OCRv4_det_infer.onnx",
-      recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
-      dictionaryPath: "/models/ppocr_keys_v1.txt",
-    },
-  });
+  initPromise = (async () => {
+    onProgress?.("Loading OCR models...");
+    const { default: Ocr } = await import("@gutenye/ocr-browser");
 
-  onProgress?.("OCR engine ready");
+    ocr = await Ocr.create({
+      models: {
+        detectionPath: "/models/ch_PP-OCRv4_det_infer.onnx",
+        recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
+        dictionaryPath: "/models/ppocr_keys_v1.txt",
+      },
+      onnxOptions: {
+        executionProviders: [
+          {
+            name: "wasm",
+            // Disable multi-threading — iOS lacks SharedArrayBuffer support
+            // in most contexts, causing onnxruntime-web to hang indefinitely
+            numThreads: 1,
+          },
+        ],
+      },
+    });
+
+    onProgress?.("OCR engine ready");
+  })();
+
+  try {
+    await initPromise;
+  } finally {
+    initPromise = null;
+  }
 }
 
 /** Capture a frame from a video element as an object URL for OCR. */

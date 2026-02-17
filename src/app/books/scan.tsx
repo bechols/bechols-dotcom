@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, RotateCcw, ScanLine } from "lucide-react";
+import { Camera, Square, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { wantToReadQueryOptions } from "@/lib/book-queries";
 import {
   initOcr,
+  isOcrReady,
   captureFrame,
   recognizeFrame,
   terminateOcr,
@@ -23,16 +24,26 @@ export const Route = createFileRoute("/books/scan")({
   },
 });
 
-type ScanState = "idle" | "camera-active" | "scanning" | "results";
+type ScanState = "idle" | "scanning";
+
+/** Normalized de-dupe key for a scan match */
+function dedupeKey(match: ScanMatch): string {
+  const title = (match.matched?.title ?? match.extracted.title).toLowerCase().trim();
+  return match.confidence !== "none" ? `matched:${title}` : `extracted:${title}`;
+}
 
 function BookshelfScanner() {
   const { data: wantToReadBooks } = useSuspenseQuery(wantToReadQueryOptions());
   const [isHydrated, setIsHydrated] = useState(false);
+  const [ocrReady, setOcrReady] = useState(isOcrReady());
+  const [ocrLoadStatus, setOcrLoadStatus] = useState("");
   const [scanState, setScanState] = useState<ScanState>("idle");
   const [statusMessage, setStatusMessage] = useState("");
-  const [matches, setMatches] = useState<ScanMatch[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [matches, setMatches] = useState<Map<string, ScanMatch>>(new Map());
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanLoopRef = useRef(false);
 
   // Ref callback: attach stream to video element when it mounts
   const videoCallbackRef = useCallback(
@@ -48,13 +59,17 @@ function BookshelfScanner() {
 
   useEffect(() => {
     setIsHydrated(true);
-    // Pre-load OCR engine on mount so it's ready when user scans
-    void initOcr();
+    // Load OCR engine eagerly on page mount
+    void initOcr((msg) => setOcrLoadStatus(msg)).then(
+      () => setOcrReady(true),
+      () => setOcrLoadStatus("Failed to load OCR engine."),
+    );
   }, []);
 
   // Cleanup camera and worker on unmount
   useEffect(() => {
     return () => {
+      scanLoopRef.current = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
@@ -63,23 +78,16 @@ function BookshelfScanner() {
   }, []);
 
   const startCamera = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setScanState("camera-active");
-    } catch {
-      setStatusMessage(
-        "Camera access denied. Please allow camera access and try again.",
-      );
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+    });
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
   }, []);
 
@@ -93,49 +101,71 @@ function BookshelfScanner() {
     }
   }, []);
 
-  const handleEnableCamera = useCallback(async () => {
-    await startCamera();
-  }, [startCamera]);
-
-  const handleScan = useCallback(async () => {
-    if (!videoRef.current) return;
-
-    // Capture frame BEFORE changing state — the video element will stay
-    // mounted but we need the frame while it's still playing
-    videoRef.current.pause();
-    const { url: frameUrl, cleanup } = captureFrame(videoRef.current);
-
-    setScanState("scanning");
-    setStatusMessage("Scanning...");
-
-    try {
-      // Ensure OCR is ready (no-op if already loaded)
-      await initOcr((msg) => setStatusMessage(msg));
-      const ocrResults = await recognizeFrame(frameUrl);
-      cleanup();
-
-      const extracted = parseExtractedBooks(ocrResults);
-      const results = matchBooksAgainstWantToRead(
-        extracted,
-        wantToReadBooks ?? [],
-      );
-      setMatches(results);
-      setScanState("results");
-      stopCamera();
-    } catch {
-      setStatusMessage("Scan failed. Please try again.");
-      setScanState("camera-active");
-      if (videoRef.current) {
-        void videoRef.current.play();
+  const runScanLoop = useCallback(async () => {
+    while (scanLoopRef.current) {
+      if (!videoRef.current) {
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
       }
-    }
-  }, [wantToReadBooks, stopCamera]);
 
-  const handleScanAgain = useCallback(async () => {
-    setMatches([]);
-    setStatusMessage("");
-    await startCamera();
-  }, [startCamera]);
+      setIsAnalyzing(true);
+      try {
+        const { url: frameUrl, cleanup } = captureFrame(videoRef.current);
+        const ocrResults = await recognizeFrame(frameUrl);
+        cleanup();
+
+        const extracted = parseExtractedBooks(ocrResults);
+        const newMatches = matchBooksAgainstWantToRead(
+          extracted,
+          wantToReadBooks ?? [],
+        );
+
+        // Merge into map, keeping higher-scoring match per key
+        setMatches((prev) => {
+          const next = new Map(prev);
+          for (const match of newMatches) {
+            const key = dedupeKey(match);
+            const existing = next.get(key);
+            if (!existing || match.score > existing.score) {
+              next.set(key, match);
+            }
+          }
+          return next;
+        });
+      } catch {
+        // Silently continue — transient frame capture errors are expected
+      }
+      setIsAnalyzing(false);
+
+      // Wait 3 seconds before next frame
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  }, [wantToReadBooks]);
+
+  const handleStartScanning = useCallback(async () => {
+    try {
+      await startCamera();
+      setScanState("scanning");
+      setStatusMessage("");
+      scanLoopRef.current = true;
+      void runScanLoop();
+    } catch {
+      setStatusMessage(
+        "Camera access denied. Please allow camera access and try again.",
+      );
+    }
+  }, [startCamera, runScanLoop]);
+
+  const handleStopScanning = useCallback(() => {
+    scanLoopRef.current = false;
+    setIsAnalyzing(false);
+    stopCamera();
+    setScanState("idle");
+  }, [stopCamera]);
+
+  const handleClearResults = useCallback(() => {
+    setMatches(new Map());
+  }, []);
 
   if (!isHydrated) {
     return (
@@ -145,44 +175,66 @@ function BookshelfScanner() {
     );
   }
 
-  const matchedBooks = matches.filter((m) => m.confidence !== "none");
-  const unmatchedBooks = matches.filter((m) => m.confidence === "none");
-  const showVideo = scanState === "camera-active" || scanState === "scanning";
+  const allMatches = Array.from(matches.values());
+  const matchedBooks = allMatches.filter((m) => m.confidence !== "none");
+  const unmatchedBooks = allMatches.filter((m) => m.confidence === "none");
 
   return (
     <div className="flex flex-col gap-4 pb-6">
-      {/* Idle state */}
-      {scanState === "idle" && (
-        <div className="flex flex-col gap-4">
-          <div className="rounded-lg border bg-gray-50 p-4">
-            <h2 className="font-semibold mb-2">Bookshelf Scanner</h2>
-            <p className="text-sm text-gray-600 mb-3">
-              Point your camera at a bookshelf to find books from your
-              want-to-read list. Uses on-device OCR — no data leaves your
-              browser.
-            </p>
-            <p className="text-xs text-gray-400">
-              {wantToReadBooks?.length ?? 0} books in your want-to-read list
-            </p>
-          </div>
+      {/* Info box — always visible in idle with no results */}
+      {scanState === "idle" && matches.size === 0 && (
+        <div className="rounded-lg border bg-gray-50 p-4">
+          <h2 className="font-semibold mb-2">Bookshelf Scanner</h2>
+          <p className="text-sm text-gray-600 mb-3">
+            Point your camera at a bookshelf to find books from your
+            want-to-read list. Continuously scans and accumulates results.
+            Uses on-device OCR — no data leaves your browser.
+          </p>
+          <p className="text-xs text-gray-400">
+            {wantToReadBooks?.length ?? 0} books in your want-to-read list
+          </p>
+        </div>
+      )}
 
+      {/* OCR loading indicator */}
+      {!ocrReady && ocrLoadStatus && scanState === "idle" && (
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-williams-purple shrink-0" />
+          <p className="text-sm text-gray-600">{ocrLoadStatus}</p>
+        </div>
+      )}
+
+      {/* Controls */}
+      {scanState === "idle" && (
+        <div className="flex items-center gap-2">
           <Button
-            onClick={() => void handleEnableCamera()}
-            className="flex items-center gap-2 self-start"
+            onClick={() => void handleStartScanning()}
+            disabled={!ocrReady}
+            className="flex items-center gap-2"
           >
             <Camera className="h-4 w-4" />
-            Enable Camera
+            {matches.size > 0 ? "Scan Again" : "Start Scanning"}
           </Button>
-
-          {statusMessage && (
-            <p className="text-sm text-gray-600">{statusMessage}</p>
+          {matches.size > 0 && (
+            <Button
+              onClick={handleClearResults}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear
+            </Button>
           )}
         </div>
       )}
 
-      {/* Single video element for both camera-active and scanning states */}
-      {showVideo && (
-        <div className="flex flex-col gap-4">
+      {statusMessage && scanState === "idle" && (
+        <p className="text-sm text-gray-600">{statusMessage}</p>
+      )}
+
+      {/* Video feed while scanning */}
+      {scanState === "scanning" && (
+        <div className="flex flex-col gap-3">
           <div className="relative w-full overflow-hidden rounded-lg bg-black">
             <video
               ref={videoCallbackRef}
@@ -191,38 +243,34 @@ function BookshelfScanner() {
               playsInline
               className="w-full"
             />
-            {scanState === "scanning" && (
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-3 border-white border-t-transparent" />
-              </div>
-            )}
+            {/* Scanning indicator overlay */}
+            <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5">
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${
+                  isAnalyzing
+                    ? "bg-yellow-400 animate-pulse"
+                    : "bg-green-400 animate-pulse"
+                }`}
+              />
+              <span className="text-xs text-white font-medium">
+                {isAnalyzing ? "Analyzing frame..." : "Scanning..."}
+              </span>
+            </div>
           </div>
 
-          {scanState === "camera-active" && (
-            <div className="flex justify-center">
-              <button
-                onClick={() => void handleScan()}
-                className="h-16 w-16 rounded-full border-4 border-williams-purple bg-white flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                aria-label="Scan bookshelf"
-              >
-                <ScanLine className="h-7 w-7 text-williams-purple" />
-              </button>
-            </div>
-          )}
-
-          {scanState === "scanning" && (
-            <div className="flex items-center gap-3">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-williams-purple shrink-0" />
-              <p className="text-sm text-gray-600">
-                {statusMessage || "Scanning..."}
-              </p>
-            </div>
-          )}
+          <Button
+            onClick={handleStopScanning}
+            variant="outline"
+            className="flex items-center gap-2 self-start"
+          >
+            <Square className="h-4 w-4" />
+            Stop
+          </Button>
         </div>
       )}
 
-      {/* Results state */}
-      {scanState === "results" && (
+      {/* Results — visible whenever there are matches, regardless of scan state */}
+      {matches.size > 0 && (
         <div className="flex flex-col gap-4">
           {matchedBooks.length > 0 && (
             <div>
@@ -230,9 +278,9 @@ function BookshelfScanner() {
                 Found on your want-to-read list ({matchedBooks.length})
               </h2>
               <div className="space-y-1">
-                {matchedBooks.map((match, i) => (
+                {matchedBooks.map((match) => (
                   <div
-                    key={i}
+                    key={dedupeKey(match)}
                     className="border border-green-200 rounded-lg px-3 py-2 bg-green-50"
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -277,9 +325,9 @@ function BookshelfScanner() {
                 Other text detected ({unmatchedBooks.length})
               </h2>
               <div className="space-y-1">
-                {unmatchedBooks.map((match, i) => (
+                {unmatchedBooks.map((match) => (
                   <div
-                    key={i}
+                    key={dedupeKey(match)}
                     className="border rounded-lg px-3 py-2 bg-gray-50"
                   >
                     <h3 className="font-medium text-sm text-gray-600 leading-tight">
@@ -295,24 +343,6 @@ function BookshelfScanner() {
               </div>
             </div>
           )}
-
-          {matches.length === 0 && (
-            <div className="rounded-lg border bg-gray-50 p-4">
-              <p className="text-sm text-gray-600">
-                No text detected. Try getting closer to the shelf or improving
-                lighting.
-              </p>
-            </div>
-          )}
-
-          <Button
-            onClick={() => void handleScanAgain()}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <RotateCcw className="h-4 w-4" />
-            Scan Again
-          </Button>
         </div>
       )}
     </div>
