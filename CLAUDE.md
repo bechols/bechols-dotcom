@@ -116,9 +116,11 @@ const getData = createServerFn({ method: "GET" })
 
 ### Bookshelf Scanner
 
-- `lib/ocr-scanner.ts` — Tesseract.js OCR worker for text recognition from camera frames. Dynamic import keeps `tesseract.js` out of the initial bundle
-- `lib/book-matcher.ts` — Parses OCR output and fuzzy-matches (Jaccard similarity) against want-to-read list
-- Engine: Tesseract.js v6 (~2MB WASM core + ~4MB eng language data), runs on any browser via WASM
+- `lib/ocr-scanner.ts` — PaddleOCR (PP-OCRv4) via `@gutenye/ocr-browser` for text recognition from camera frames. Dynamic import keeps `onnxruntime-web` out of the initial bundle. Returns structured `{ text, confidence }` results
+- `lib/book-matcher.ts` — Accepts structured OCR results and fuzzy-matches (Jaccard similarity) against want-to-read list
+- Engine: PP-OCRv4 ONNX models (~16MB total) via `onnxruntime-web` (WASM backend). Detects rotated/angled text — handles book spines well
+- Model files: copied from `node_modules/@gutenye/ocr-models/assets/` to `public/models/` via `postinstall` script (`scripts/copy-ocr-models.js`). `public/models/` is gitignored
+- Vercel deploy: `onnxruntime-web`, `@gutenye`, and `@techstark` stripped from serverless function in `vercel.json` build command
 - Service worker preserves `transformers`-prefixed caches on update (harmless legacy check)
 
 ## Key Constraints

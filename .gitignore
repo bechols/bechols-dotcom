@@ -39,3 +39,6 @@ next-env.d.ts
 # Tanstack build files
 .nitro/
 .tanstack/
+
+# OCR model files (copied from node_modules at install time)
+public/models/

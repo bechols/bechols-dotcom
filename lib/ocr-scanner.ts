@@ -1,34 +1,43 @@
-// Tesseract.js OCR for bookshelf scanning.
-// Dynamic import keeps tesseract.js out of the initial bundle.
+// PaddleOCR (PP-OCRv4) via @gutenye/ocr-browser for bookshelf scanning.
+// Dynamic import keeps onnxruntime-web out of the initial bundle.
 
 // eslint-disable-next-line no-unused-vars
 type ProgressCallback = (status: string) => void;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let worker: any = null;
-
-export function isWorkerReady(): boolean {
-  return worker !== null;
+export interface OcrResult {
+  text: string;
+  confidence: number;
 }
 
-export async function initWorker(onProgress?: ProgressCallback): Promise<void> {
-  if (worker) return;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let ocr: any = null;
 
-  onProgress?.("Loading OCR engine...");
-  const { createWorker } = await import("tesseract.js");
+export function isOcrReady(): boolean {
+  return ocr !== null;
+}
 
-  worker = await createWorker("eng", undefined, {
-    logger: (m: { status: string }) => {
-      if (m.status === "recognizing text") return; // skip per-frame progress
-      onProgress?.(m.status);
+export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
+  if (ocr) return;
+
+  onProgress?.("Loading OCR models...");
+  const { default: Ocr } = await import("@gutenye/ocr-browser");
+
+  ocr = await Ocr.create({
+    models: {
+      detectionPath: "/models/ch_PP-OCRv4_det_infer.onnx",
+      recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
+      dictionaryPath: "/models/ppocr_keys_v1.txt",
     },
   });
 
   onProgress?.("OCR engine ready");
 }
 
-/** Capture a frame from a video element as a PNG Blob, downscaled to max 1280px wide. */
-export async function captureFrame(video: HTMLVideoElement): Promise<Blob> {
+/** Capture a frame from a video element as an object URL for OCR. */
+export function captureFrame(video: HTMLVideoElement): {
+  url: string;
+  cleanup: () => void;
+} {
   const canvas = document.createElement("canvas");
   const scale = Math.min(1, 1280 / video.videoWidth);
   canvas.width = Math.round(video.videoWidth * scale);
@@ -36,27 +45,30 @@ export async function captureFrame(video: HTMLVideoElement): Promise<Blob> {
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Canvas toBlob failed"))), "image/png");
-  });
+  // Convert canvas to blob URL for @gutenye/ocr-browser (expects a URL string)
+  const dataUrl = canvas.toDataURL("image/png");
+  return { url: dataUrl, cleanup: () => {} };
 }
 
-/** Run OCR on a previously captured frame blob. */
-export async function recognizeFrame(blob: Blob): Promise<string> {
-  if (!worker) {
-    throw new Error("Worker not initialized. Call initWorker() first.");
+/** Run OCR on a captured frame, returning structured results with confidence. */
+export async function recognizeFrame(imageUrl: string): Promise<OcrResult[]> {
+  if (!ocr) {
+    throw new Error("OCR not initialized. Call initOcr() first.");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-  const result = await worker.recognize(blob);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  return String(result.data.text).trim();
+  const lines: Array<{ text: string; mean: number }> = await ocr.detect(
+    imageUrl,
+  );
+
+  return lines.map((line) => ({
+    text: line.text.trim(),
+    confidence: line.mean,
+  }));
 }
 
-export async function terminateWorker(): Promise<void> {
-  if (worker) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    await worker.terminate();
-    worker = null;
-  }
+export function terminateOcr(): void {
+  // @gutenye/ocr-browser doesn't expose a destroy method, but we can
+  // release the reference so the GC can reclaim the WASM memory.
+  ocr = null;
 }

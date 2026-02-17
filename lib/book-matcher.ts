@@ -1,7 +1,8 @@
-// Pure functions for parsing VLM output and fuzzy matching against want-to-read list.
+// Pure functions for parsing OCR output and fuzzy matching against want-to-read list.
 // Zero external dependencies.
 
 import type { BookInfo } from "@/src/types/book-types";
+import type { OcrResult } from "@/lib/ocr-scanner";
 
 export interface ExtractedBook {
   title: string;
@@ -40,36 +41,22 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
 }
 
 /**
- * Parse raw VLM output into structured book entries.
- * Handles formats like:
- * - "Title by Author"
- * - "1. Title by Author"
- * - "- Title by Author"
- * - Just "Title" with no author
+ * Parse structured OCR results into book entries.
+ * Each OCR detection becomes one ExtractedBook. Low-confidence results
+ * (mean < 0.5) are filtered out as noise.
  */
-export function parseExtractedBooks(rawText: string): ExtractedBook[] {
-  const lines = rawText
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  const books: ExtractedBook[] = [];
-
-  for (const line of lines) {
-    // Strip leading numbering or bullets: "1. ", "- ", "• "
-    const cleaned = line.replace(/^[\d]+[.)]\s*/, "").replace(/^[-•]\s*/, "").trim();
-    if (!cleaned) continue;
-
-    // Try to split on " by " (case-insensitive)
-    const byMatch = cleaned.match(/^(.+?)\s+by\s+(.+)$/i);
-    if (byMatch) {
-      books.push({ title: byMatch[1].trim(), author: byMatch[2].trim() });
-    } else {
-      books.push({ title: cleaned });
-    }
-  }
-
-  return books;
+export function parseExtractedBooks(results: OcrResult[]): ExtractedBook[] {
+  return results
+    .filter((r) => r.confidence >= 0.5 && r.text.length > 1)
+    .map((r) => {
+      const cleaned = r.text.trim();
+      // Try to split on " by " (case-insensitive)
+      const byMatch = cleaned.match(/^(.+?)\s+by\s+(.+)$/i);
+      if (byMatch) {
+        return { title: byMatch[1].trim(), author: byMatch[2].trim() };
+      }
+      return { title: cleaned };
+    });
 }
 
 /**

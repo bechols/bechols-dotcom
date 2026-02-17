@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { wantToReadQueryOptions } from "@/lib/book-queries";
 import {
-  initWorker,
+  initOcr,
   captureFrame,
   recognizeFrame,
-  terminateWorker,
+  terminateOcr,
 } from "@/lib/ocr-scanner";
 import {
   parseExtractedBooks,
@@ -49,7 +49,7 @@ function BookshelfScanner() {
   useEffect(() => {
     setIsHydrated(true);
     // Pre-load OCR engine on mount so it's ready when user scans
-    void initWorker();
+    void initOcr();
   }, []);
 
   // Cleanup camera and worker on unmount
@@ -58,7 +58,7 @@ function BookshelfScanner() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
-      void terminateWorker();
+      void terminateOcr();
     };
   }, []);
 
@@ -103,17 +103,18 @@ function BookshelfScanner() {
     // Capture frame BEFORE changing state — the video element will stay
     // mounted but we need the frame while it's still playing
     videoRef.current.pause();
-    const frameBlob = await captureFrame(videoRef.current);
+    const { url: frameUrl, cleanup } = captureFrame(videoRef.current);
 
     setScanState("scanning");
     setStatusMessage("Scanning...");
 
     try {
-      // Ensure worker is ready (no-op if already loaded)
-      await initWorker((msg) => setStatusMessage(msg));
-      const rawText = await recognizeFrame(frameBlob);
+      // Ensure OCR is ready (no-op if already loaded)
+      await initOcr((msg) => setStatusMessage(msg));
+      const ocrResults = await recognizeFrame(frameUrl);
+      cleanup();
 
-      const extracted = parseExtractedBooks(rawText);
+      const extracted = parseExtractedBooks(ocrResults);
       const results = matchBooksAgainstWantToRead(
         extracted,
         wantToReadBooks ?? [],
