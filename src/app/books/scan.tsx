@@ -81,8 +81,8 @@ function BookshelfScanner() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 640 },
+        height: { ideal: 480 },
       },
     });
     streamRef.current = stream;
@@ -232,38 +232,37 @@ function BookshelfScanner() {
         <p className="text-sm text-gray-600">{statusMessage}</p>
       )}
 
-      {/* Video feed while scanning */}
+      {/* Compact scanning bar with video thumbnail */}
       {scanState === "scanning" && (
-        <div className="flex flex-col gap-3">
-          <div className="relative w-full overflow-hidden rounded-lg bg-black">
+        <div className="flex items-center gap-3">
+          <div className="relative w-32 h-24 shrink-0 overflow-hidden rounded-md bg-black">
             <video
               ref={videoCallbackRef}
               autoPlay
               muted
               playsInline
-              className="w-full"
+              className="h-full w-full object-cover"
             />
-            {/* Scanning indicator overlay */}
-            <div className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5">
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${
-                  isAnalyzing
-                    ? "bg-yellow-400 animate-pulse"
-                    : "bg-green-400 animate-pulse"
-                }`}
-              />
-              <span className="text-xs text-white font-medium">
-                {isAnalyzing ? "Analyzing frame..." : "Scanning..."}
-              </span>
-            </div>
           </div>
-
+          <div className="flex items-center gap-2">
+            <span
+              className={`h-2.5 w-2.5 rounded-full shrink-0 ${
+                isAnalyzing
+                  ? "bg-yellow-400 animate-pulse"
+                  : "bg-green-400 animate-pulse"
+              }`}
+            />
+            <span className="text-sm text-gray-600">
+              {isAnalyzing ? "Analyzing..." : "Scanning..."}
+            </span>
+          </div>
           <Button
             onClick={handleStopScanning}
             variant="outline"
-            className="flex items-center gap-2 self-start"
+            size="sm"
+            className="flex items-center gap-1.5 shrink-0"
           >
-            <Square className="h-4 w-4" />
+            <Square className="h-3.5 w-3.5" />
             Stop
           </Button>
         </div>

@@ -97,6 +97,12 @@ export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
           recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
           dictionaryPath: "/models/ppocr_keys_v1.txt",
         },
+        onnxOptions: {
+          executionProviders: ["wasm"],
+          graphOptimizationLevel: "all",
+          enableMemPattern: false,
+          enableCpuMemArena: false,
+        },
       });
     } finally {
       globalThis.fetch = originalFetch;
@@ -118,8 +124,8 @@ export async function captureFrame(video: HTMLVideoElement): Promise<{
   cleanup: () => void;
 }> {
   const canvas = document.createElement("canvas");
-  // Scale to max 640px wide — enough for OCR, much less memory than 1280
-  const scale = Math.min(1, 640 / video.videoWidth);
+  // Scale to max 480px wide — smaller tensors reduce WASM memory pressure on iOS
+  const scale = Math.min(1, 480 / video.videoWidth);
   canvas.width = Math.round(video.videoWidth * scale);
   canvas.height = Math.round(video.videoHeight * scale);
   const ctx = canvas.getContext("2d")!;
