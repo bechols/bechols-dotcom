@@ -81,8 +81,8 @@ function BookshelfScanner() {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: "environment",
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       },
     });
     streamRef.current = stream;
@@ -110,7 +110,7 @@ function BookshelfScanner() {
 
       setIsAnalyzing(true);
       try {
-        const { url: frameUrl, cleanup } = captureFrame(videoRef.current);
+        const { url: frameUrl, cleanup } = await captureFrame(videoRef.current);
         const ocrResults = await recognizeFrame(frameUrl);
         cleanup();
 

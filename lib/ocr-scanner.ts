@@ -112,21 +112,25 @@ export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
   }
 }
 
-/** Capture a frame from a video element as an object URL for OCR. */
-export function captureFrame(video: HTMLVideoElement): {
+/** Capture a frame from a video element as a blob URL for OCR. */
+export async function captureFrame(video: HTMLVideoElement): Promise<{
   url: string;
   cleanup: () => void;
-} {
+}> {
   const canvas = document.createElement("canvas");
-  const scale = Math.min(1, 1280 / video.videoWidth);
+  // Scale to max 640px wide — enough for OCR, much less memory than 1280
+  const scale = Math.min(1, 640 / video.videoWidth);
   canvas.width = Math.round(video.videoWidth * scale);
   canvas.height = Math.round(video.videoHeight * scale);
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  // Convert canvas to blob URL for @gutenye/ocr-browser (expects a URL string)
-  const dataUrl = canvas.toDataURL("image/png");
-  return { url: dataUrl, cleanup: () => {} };
+  // Blob URL is far more memory-efficient than a base64 data URL
+  const blob = await new Promise<Blob>((resolve) =>
+    canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.8),
+  );
+  const url = URL.createObjectURL(blob);
+  return { url, cleanup: () => URL.revokeObjectURL(url) };
 }
 
 /** Run OCR on a captured frame, returning structured results with confidence. */
