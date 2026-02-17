@@ -28,6 +28,15 @@ export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
 
   initPromise = (async () => {
     onProgress?.("Loading OCR models...");
+
+    // Configure WASM runtime BEFORE importing @gutenye/ocr-browser.
+    // onnxruntime-web decides which .wasm file to load at import time:
+    // multi-threaded WASM uses a blob-URL web worker that can't fetch
+    // same-origin assets on iOS (CORS error), so force single-threaded.
+    const ort = await import("onnxruntime-web");
+    ort.env.wasm.numThreads = 1;
+    ort.env.wasm.proxy = false;
+
     const { default: Ocr } = await import("@gutenye/ocr-browser");
 
     ocr = await Ocr.create({
@@ -35,16 +44,6 @@ export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
         detectionPath: "/models/ch_PP-OCRv4_det_infer.onnx",
         recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
         dictionaryPath: "/models/ppocr_keys_v1.txt",
-      },
-      onnxOptions: {
-        executionProviders: [
-          {
-            name: "wasm",
-            // Disable multi-threading — iOS lacks SharedArrayBuffer support
-            // in most contexts, causing onnxruntime-web to hang indefinitely
-            numThreads: 1,
-          },
-        ],
       },
     });
 
