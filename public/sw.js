@@ -16,6 +16,7 @@ const STATIC_EXTENSIONS = [
   ".ico",
   ".webp",
   ".wasm",
+  ".onnx",
 ];
 
 function isStaticAsset(url) {

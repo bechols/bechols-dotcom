@@ -27,7 +27,7 @@ export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
   }
 
   initPromise = (async () => {
-    onProgress?.("Loading OCR models...");
+    onProgress?.("Loading OCR engine...");
 
     // Configure WASM runtime BEFORE importing @gutenye/ocr-browser.
     // onnxruntime-web decides which .wasm file to load at import time:
@@ -37,15 +37,70 @@ export async function initOcr(onProgress?: ProgressCallback): Promise<void> {
     ort.env.wasm.numThreads = 1;
     ort.env.wasm.proxy = false;
 
-    const { default: Ocr } = await import("@gutenye/ocr-browser");
+    // Temporarily wrap fetch to track model download progress without
+    // double-loading. Data flows through the ReadableStream wrapper
+    // directly to onnxruntime — no extra memory copies.
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const resp = await originalFetch(input, init);
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
 
-    ocr = await Ocr.create({
-      models: {
-        detectionPath: "/models/ch_PP-OCRv4_det_infer.onnx",
-        recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
-        dictionaryPath: "/models/ppocr_keys_v1.txt",
-      },
-    });
+      if (!url.includes("/models/") || !url.endsWith(".onnx")) return resp;
+
+      const label = url.includes("det") ? "detection" : "recognition";
+      const total = Number(resp.headers.get("content-length") ?? 0);
+
+      if (!resp.body || total <= 0) {
+        onProgress?.(`Downloading ${label} model...`);
+        return resp;
+      }
+
+      let loaded = 0;
+      const reader = resp.body.getReader();
+      const stream = new ReadableStream({
+        async pull(controller) {
+          const { done, value } = await reader.read();
+          if (done) {
+            controller.close();
+            return;
+          }
+          loaded += value.byteLength;
+          const pct = Math.round((loaded / total) * 100);
+          const mb = (loaded / 1024 / 1024).toFixed(1);
+          const totalMb = (total / 1024 / 1024).toFixed(1);
+          onProgress?.(
+            `Downloading ${label} model... ${mb}/${totalMb} MB (${pct}%)`,
+          );
+          controller.enqueue(value);
+        },
+      });
+
+      return new Response(stream, {
+        headers: resp.headers,
+        status: resp.status,
+        statusText: resp.statusText,
+      });
+    };
+
+    try {
+      onProgress?.("Downloading OCR models (~14 MB)...");
+      const { default: Ocr } = await import("@gutenye/ocr-browser");
+
+      ocr = await Ocr.create({
+        models: {
+          detectionPath: "/models/ch_PP-OCRv4_det_infer.onnx",
+          recognitionPath: "/models/ch_PP-OCRv4_rec_infer.onnx",
+          dictionaryPath: "/models/ppocr_keys_v1.txt",
+        },
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
 
     onProgress?.("OCR engine ready");
   })();
