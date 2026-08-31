@@ -37,7 +37,8 @@ src/app/
 │   ├── index.tsx           → Currently reading + recently read
 │   ├── want-to-read.tsx    → Paginated with search/sort
 │   ├── analytics.tsx       → Reading analytics charts
-│   └── explore.tsx         → Datasette DB explorer
+│   ├── explore.tsx         → Datasette DB explorer
+│   └── scan.tsx            → Bookshelf scanner (camera + on-device OCR)
 ├── interesting.tsx         → /interesting
 └── globals.css
 ```
@@ -113,6 +114,15 @@ const getData = createServerFn({ method: "GET" })
 - Auto-PR creation on push to non-main branches (`.github/workflows/auto-pr.yml`)
 - Vercel preview URL posted as PR comment (`.github/workflows/vercel-preview-comment.yml`)
 
+### Bookshelf Scanner
+
+- `lib/ocr-scanner.ts` — PaddleOCR (PP-OCRv4) via `@gutenye/ocr-browser` for text recognition from camera frames. Dynamic import keeps `onnxruntime-web` out of the initial bundle. Returns structured `{ text, confidence }` results
+- `lib/book-matcher.ts` — Accepts structured OCR results and fuzzy-matches (Jaccard similarity) against want-to-read list
+- Engine: PP-OCRv4 ONNX models (~16MB total) via `onnxruntime-web` (WASM backend). Detects rotated/angled text — handles book spines well
+- Model files: copied from `node_modules/@gutenye/ocr-models/assets/` to `public/models/` via `postinstall` script (`scripts/copy-ocr-models.js`). `public/models/` is gitignored
+- Vercel deploy: `onnxruntime-web`, `@gutenye`, and `@techstark` stripped from serverless function in `vercel.json` build command
+- Service worker preserves `transformers`-prefixed caches on update (harmless legacy check)
+
 ## Key Constraints
 
 - Node.js 22+ required
@@ -121,3 +131,4 @@ const getData = createServerFn({ method: "GET" })
 - Git commit SHA injected at build time via `vite.config.ts` (`__GIT_COMMIT_SHA__`) — used as React Query cache buster
 - Genre taxonomy is config-driven: `lib/genre-hierarchy.ts` is the single source of truth for both DB normalization scripts and UI rendering (genre dropdown optgroups)
 - Adding new browser/service-worker globals requires updating `eslint.config.js` globals section
+- Never force push (`git push --force` or `--force-with-lease`) without explicit user approval
