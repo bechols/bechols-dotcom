@@ -12,7 +12,7 @@ This is a personal website built with [TanStack Start](https://tanstack.com/star
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 24.20+
 - npm, yarn, pnpm, or bun
 
 ### Installation

@@ -4,7 +4,14 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   // Global ignores and base JS config
   {
-    ignores: ["dist", "node_modules", ".nitro", ".tanstack", ".vercel"],
+    ignores: [
+      "dist",
+      "node_modules",
+      ".nitro",
+      ".output",
+      ".tanstack",
+      ".vercel",
+    ],
   },
   js.configs.recommended,
 

@@ -9,26 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './app/__root'
-import { Route as InterestingRouteImport } from './app/interesting'
-import { Route as BooksRouteImport } from './app/books'
-import { Route as AboutRouteImport } from './app/about'
 import { Route as IndexRouteImport } from './app/index'
-import { Route as BooksIndexRouteImport } from './app/books/index'
+import { Route as AboutRouteImport } from './app/about'
+import { Route as BooksRouteImport } from './app/books'
+import { Route as InterestingRouteImport } from './app/interesting'
 import { Route as AboutIndexRouteImport } from './app/about/index'
-import { Route as BooksWantToReadRouteImport } from './app/books/want-to-read'
-import { Route as BooksExploreRouteImport } from './app/books/explore'
-import { Route as BooksAnalyticsRouteImport } from './app/books/analytics'
-import { Route as AboutUserManualRouteImport } from './app/about/user-manual'
 import { Route as AboutHowIGotIntoPmRouteImport } from './app/about/how-i-got-into-pm'
+import { Route as AboutUserManualRouteImport } from './app/about/user-manual'
+import { Route as BooksIndexRouteImport } from './app/books/index'
+import { Route as BooksAnalyticsRouteImport } from './app/books/analytics'
+import { Route as BooksExploreRouteImport } from './app/books/explore'
+import { Route as BooksWantToReadRouteImport } from './app/books/want-to-read'
 
-const InterestingRoute = InterestingRouteImport.update({
-  id: '/interesting',
-  path: '/interesting',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BooksRoute = BooksRouteImport.update({
-  id: '/books',
-  path: '/books',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -36,29 +31,34 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BooksRoute = BooksRouteImport.update({
+  id: '/books',
+  path: '/books',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BooksIndexRoute = BooksIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => BooksRoute,
+const InterestingRoute = InterestingRouteImport.update({
+  id: '/interesting',
+  path: '/interesting',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AboutIndexRoute = AboutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AboutRoute,
 } as any)
-const BooksWantToReadRoute = BooksWantToReadRouteImport.update({
-  id: '/want-to-read',
-  path: '/want-to-read',
-  getParentRoute: () => BooksRoute,
+const AboutHowIGotIntoPmRoute = AboutHowIGotIntoPmRouteImport.update({
+  id: '/how-i-got-into-pm',
+  path: '/how-i-got-into-pm',
+  getParentRoute: () => AboutRoute,
 } as any)
-const BooksExploreRoute = BooksExploreRouteImport.update({
-  id: '/explore',
-  path: '/explore',
+const AboutUserManualRoute = AboutUserManualRouteImport.update({
+  id: '/user-manual',
+  path: '/user-manual',
+  getParentRoute: () => AboutRoute,
+} as any)
+const BooksIndexRoute = BooksIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => BooksRoute,
 } as any)
 const BooksAnalyticsRoute = BooksAnalyticsRouteImport.update({
@@ -66,15 +66,15 @@ const BooksAnalyticsRoute = BooksAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => BooksRoute,
 } as any)
-const AboutUserManualRoute = AboutUserManualRouteImport.update({
-  id: '/user-manual',
-  path: '/user-manual',
-  getParentRoute: () => AboutRoute,
+const BooksExploreRoute = BooksExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => BooksRoute,
 } as any)
-const AboutHowIGotIntoPmRoute = AboutHowIGotIntoPmRouteImport.update({
-  id: '/how-i-got-into-pm',
-  path: '/how-i-got-into-pm',
-  getParentRoute: () => AboutRoute,
+const BooksWantToReadRoute = BooksWantToReadRouteImport.update({
+  id: '/want-to-read',
+  path: '/want-to-read',
+  getParentRoute: () => BooksRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -164,18 +164,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/interesting': {
-      id: '/interesting'
-      path: '/interesting'
-      fullPath: '/interesting'
-      preLoaderRoute: typeof InterestingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/books': {
-      id: '/books'
-      path: '/books'
-      fullPath: '/books'
-      preLoaderRoute: typeof BooksRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -185,19 +178,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/books': {
+      id: '/books'
+      path: '/books'
+      fullPath: '/books'
+      preLoaderRoute: typeof BooksRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/books/': {
-      id: '/books/'
-      path: '/'
-      fullPath: '/books/'
-      preLoaderRoute: typeof BooksIndexRouteImport
-      parentRoute: typeof BooksRoute
+    '/interesting': {
+      id: '/interesting'
+      path: '/interesting'
+      fullPath: '/interesting'
+      preLoaderRoute: typeof InterestingRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/about/': {
       id: '/about/'
@@ -206,18 +199,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutIndexRouteImport
       parentRoute: typeof AboutRoute
     }
-    '/books/want-to-read': {
-      id: '/books/want-to-read'
-      path: '/want-to-read'
-      fullPath: '/books/want-to-read'
-      preLoaderRoute: typeof BooksWantToReadRouteImport
-      parentRoute: typeof BooksRoute
+    '/about/how-i-got-into-pm': {
+      id: '/about/how-i-got-into-pm'
+      path: '/how-i-got-into-pm'
+      fullPath: '/about/how-i-got-into-pm'
+      preLoaderRoute: typeof AboutHowIGotIntoPmRouteImport
+      parentRoute: typeof AboutRoute
     }
-    '/books/explore': {
-      id: '/books/explore'
-      path: '/explore'
-      fullPath: '/books/explore'
-      preLoaderRoute: typeof BooksExploreRouteImport
+    '/about/user-manual': {
+      id: '/about/user-manual'
+      path: '/user-manual'
+      fullPath: '/about/user-manual'
+      preLoaderRoute: typeof AboutUserManualRouteImport
+      parentRoute: typeof AboutRoute
+    }
+    '/books/': {
+      id: '/books/'
+      path: '/'
+      fullPath: '/books/'
+      preLoaderRoute: typeof BooksIndexRouteImport
       parentRoute: typeof BooksRoute
     }
     '/books/analytics': {
@@ -227,19 +227,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BooksAnalyticsRouteImport
       parentRoute: typeof BooksRoute
     }
-    '/about/user-manual': {
-      id: '/about/user-manual'
-      path: '/user-manual'
-      fullPath: '/about/user-manual'
-      preLoaderRoute: typeof AboutUserManualRouteImport
-      parentRoute: typeof AboutRoute
+    '/books/explore': {
+      id: '/books/explore'
+      path: '/explore'
+      fullPath: '/books/explore'
+      preLoaderRoute: typeof BooksExploreRouteImport
+      parentRoute: typeof BooksRoute
     }
-    '/about/how-i-got-into-pm': {
-      id: '/about/how-i-got-into-pm'
-      path: '/how-i-got-into-pm'
-      fullPath: '/about/how-i-got-into-pm'
-      preLoaderRoute: typeof AboutHowIGotIntoPmRouteImport
-      parentRoute: typeof AboutRoute
+    '/books/want-to-read': {
+      id: '/books/want-to-read'
+      path: '/want-to-read'
+      fullPath: '/books/want-to-read'
+      preLoaderRoute: typeof BooksWantToReadRouteImport
+      parentRoute: typeof BooksRoute
     }
   }
 }
@@ -283,3 +283,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

@@ -424,9 +424,9 @@ function Analytics() {
                 />
                 <YAxis />
                 <Tooltip
-                  labelFormatter={(label: string | number) => label}
-                  formatter={(value: number): [number, string] => [
-                    value,
+                  labelFormatter={(label) => label}
+                  formatter={(value) => [
+                    value ?? 0,
                     "Books",
                   ]}
                 />
@@ -494,7 +494,7 @@ function Analytics() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: number, name: string) => [value, name]}
+                  formatter={(value, name) => [value ?? 0, name ?? ""]}
                   labelFormatter={() => "Rating Distribution"}
                   itemSorter={(item) => {
                     // Sort by rating value in descending order (5★ to 0★)
@@ -557,7 +557,6 @@ function Analytics() {
                         if (!active || !payload || payload.length === 0) {
                           return null;
                         }
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                         const firstPayload = payload[0];
                         if (
                           !firstPayload ||
@@ -566,7 +565,6 @@ function Analytics() {
                         ) {
                           return null;
                         }
-                        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                         const data = firstPayload.payload as GenreAnalytics;
                         return (
                           <div className="bg-white p-3 border rounded shadow-lg">

@@ -178,7 +178,9 @@ async function getAPIShelfCount(shelf) {
       });
     });
   } catch (error) {
-    throw new Error(`Error fetching ${shelf} shelf count: ${error.message}`);
+    throw new Error(`Error fetching ${shelf} shelf count: ${error.message}`, {
+      cause: error,
+    });
   }
 }
 
@@ -252,7 +254,7 @@ async function syncShelfData(shelf) {
   console.log(`📚 Total books fetched from API: ${allBooks.length}`);
 
   // Now sync all the books to the database with transaction safety
-  let syncedCount = 0;
+  let syncedCount;
   const insertBookStmt = db.prepare(`
     INSERT OR IGNORE INTO books (goodreads_id, title, author, isbn, image_url, description, pages, publication_year)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)

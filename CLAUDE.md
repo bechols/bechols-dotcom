@@ -115,7 +115,7 @@ const getData = createServerFn({ method: "GET" })
 
 ## Key Constraints
 
-- Node.js 22+ required
+- Node.js 24.20+ required
 - Always use `public/books.db` as the database path (not `data/books.db`)
 - Route paths: use `/books/analytics` not `/books/analytics/`
 - Git commit SHA injected at build time via `vite.config.ts` (`__GIT_COMMIT_SHA__`) — used as React Query cache buster

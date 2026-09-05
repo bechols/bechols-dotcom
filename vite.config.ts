@@ -2,7 +2,8 @@ import { defineConfig } from "vite";
 import { execSync } from "child_process";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import tsconfigPaths from "vite-tsconfig-paths";
+import viteReact from "@vitejs/plugin-react";
+import { nitro } from "nitro/vite";
 
 const getGitCommitSha = () => {
   try {
@@ -14,6 +15,9 @@ const getGitCommitSha = () => {
 };
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   server: {
     port: 3000,
   },
@@ -22,15 +26,14 @@ export default defineConfig({
   },
   envPrefix: ["VITE_", "GOODREADS_"],
   plugins: [
-    tailwindcss(),
-    // Enables Vite to resolve imports using path aliases.
-    tsconfigPaths(),
     tanstackStart({
-      tsr: {
+      router: {
         // Specifies the directory TanStack Router uses for your routes.
-        routesDirectory: "src/app", // Defaults to "src/routes"
+        routesDirectory: "app", // Relative to the default srcDirectory ("src")
       },
-      target: "vercel",
     }),
+    nitro(),
+    viteReact(),
+    tailwindcss(),
   ],
 });

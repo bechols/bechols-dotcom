@@ -9,7 +9,7 @@ import { Link } from "@tanstack/react-router";
 
 import { SiGithub } from "react-icons/si";
 import { SiGmail } from "react-icons/si";
-import { SiLinkedin } from "react-icons/si";
+import { FaLinkedin } from "react-icons/fa";
 
 export default function Nav() {
   return (
@@ -82,7 +82,7 @@ export default function Nav() {
                 rel="noreferrer noopener"
                 aria-label="LinkedIn"
               >
-                <SiLinkedin />
+                <FaLinkedin />
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
