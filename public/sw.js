@@ -1,73 +1,51 @@
-// Service Worker — static-asset-only caching
-// React Query + localStorage persistence handles data caching;
-// this SW only caches the app shell (JS, CSS, fonts, images).
-const CACHE_NAME = "bechols-static-v2";
+// Cache only same-origin static assets; data caching belongs to React Query.
+const CACHE_NAME = "bechols-static-v3";
+const STATIC_ASSET = /\.(?:js|css|woff2?|png|jpe?g|svg|ico|webp)$/i;
+// Vite emits fingerprinted build assets under /assets/.
+const FINGERPRINTED_ASSET = /^\/assets\/.+-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$/i;
 
-// File extensions to cache (Vite hashes these, so cache-first is safe)
-const STATIC_EXTENSIONS = [
-  ".js",
-  ".css",
-  ".woff2",
-  ".woff",
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".svg",
-  ".ico",
-  ".webp",
-];
-
-function isStaticAsset(url) {
-  const pathname = new URL(url).pathname;
-  return STATIC_EXTENSIONS.some((ext) => pathname.endsWith(ext));
-}
-
-// Install — skip waiting to activate immediately
-self.addEventListener("install", () => {
-  self.skipWaiting();
-});
-
-// Activate — clean up old caches (including the old catch-all v1 cache)
+self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            return caches.delete(name);
-          }
-        })
+    caches.keys().then(async (names) => {
+      await Promise.all(
+        names
+          .filter(
+            (name) => name.startsWith("bechols-static-") && name !== CACHE_NAME,
+          )
+          .map((name) => caches.delete(name)),
       );
-    })
+      await self.clients.claim();
+    }),
   );
-  return self.clients.claim();
 });
 
-// Fetch — cache-first for static assets, network-only for everything else
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  if (!event.request.url.startsWith("http")) return;
-
   const url = new URL(event.request.url);
+  if (
+    url.origin !== self.location.origin ||
+    url.pathname === "/sw.js" ||
+    !STATIC_ASSET.test(url.pathname)
+  )
+    return;
 
-  // Only cache same-origin static assets
-  if (url.origin !== self.location.origin) return;
-  if (!isStaticAsset(event.request.url)) return;
-
-  // Cache-first: static assets have hashed filenames from Vite
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(event.request);
+      if (FINGERPRINTED_ASSET.test(url.pathname) && cached) return cached;
 
-      return fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, clone);
-          });
-        }
+      // Stable URLs revalidate with the network, retaining an offline fallback.
+      try {
+        const response = await fetch(event.request, { cache: "no-cache" });
+        if (response.status === 200)
+          await cache.put(event.request, response.clone());
         return response;
-      });
-    })
+      } catch (error) {
+        if (cached) return cached;
+        throw error;
+      }
+    })(),
   );
 });

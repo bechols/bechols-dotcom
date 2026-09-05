@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/page-head";
 import {
   Bar,
   BarChart,
@@ -255,6 +256,12 @@ function StatCard({
 }
 
 export const Route = createFileRoute("/books/analytics")({
+  head: () =>
+    pageHead(
+      "/books/analytics",
+      "Reading Analytics | Ben Echols",
+      "Explore Ben Echols’s reading history through charts and statistics.",
+    ),
   component: Analytics,
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(analyticsQueryOptions());

@@ -1,7 +1,14 @@
+import { pageHead } from "@/lib/page-head";
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/about/user-manual")({
+  head: () =>
+    pageHead(
+      "/about/user-manual",
+      "Working with Ben Echols",
+      "A guide to how Ben Echols likes to work and collaborate.",
+    ),
   component: UserManual,
 });
 

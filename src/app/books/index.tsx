@@ -1,6 +1,10 @@
+import { pageHead } from "@/lib/page-head";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
-import { useSuspenseQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import {
+  useSuspenseQuery,
+  useSuspenseInfiniteQuery,
+} from "@tanstack/react-query";
 import type { BookInfo } from "@/src/types/book-types";
 import { BookCard } from "@/components/BookCard";
 import { Button } from "@/components/ui/button";
@@ -10,6 +14,12 @@ import {
 } from "@/lib/book-queries";
 
 export const Route = createFileRoute("/books/")({
+  head: () =>
+    pageHead(
+      "/books",
+      "Reading List | Ben Echols",
+      "Books Ben Echols is currently reading and has recently read, with ratings and reviews.",
+    ),
   component: Books,
   loader: async ({ context }) => {
     await Promise.all([
@@ -57,8 +67,12 @@ function Books() {
           Currently reading
         </h2>
         <div className="space-y-6">
-          {currentBooks.map((bookInfo: BookInfo) => (
-            <BookCard key={bookInfo.title} {...bookInfo} />
+          {currentBooks.map((bookInfo: BookInfo, index: number) => (
+            <BookCard
+              key={bookInfo.title}
+              {...bookInfo}
+              loading={index === 0 ? "eager" : "lazy"}
+            />
           ))}
         </div>
         {currentBooks.length === 0 && (
@@ -75,7 +89,12 @@ function Books() {
           <div className="space-y-6">
             {recentBooks.map((bookInfo: BookInfo, index: number) => (
               <div key={`${bookInfo.title}-${index}`}>
-                <BookCard {...bookInfo} />
+                <BookCard
+                  {...bookInfo}
+                  loading={
+                    currentBooks.length === 0 && index === 0 ? "eager" : "lazy"
+                  }
+                />
               </div>
             ))}
           </div>

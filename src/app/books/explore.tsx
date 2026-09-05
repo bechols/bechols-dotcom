@@ -1,6 +1,13 @@
+import { pageHead } from "@/lib/page-head";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/books/explore")({
+  head: () =>
+    pageHead(
+      "/books/explore",
+      "Explore the Books Database | Ben Echols",
+      "Explore the data behind Ben Echols’s reading lists.",
+    ),
   component: BooksExplore,
 });
 

@@ -1,6 +1,6 @@
 import { LibraryBig, Lightbulb, Rocket } from "lucide-react";
 import { AspectRatio } from "./ui/aspect-ratio";
-import { Button } from "./ui/button";
+import { buttonVariants } from "./ui/button";
 import { Link } from "@tanstack/react-router";
 
 export default function Hero() {
@@ -8,37 +8,52 @@ export default function Hero() {
     <div className="flex flex-col lg:flex-row gap-8 w-full max-w-screen-xl mx-auto">
       <div className="flex flex-col gap-8 w-full lg:w-[45%]">
         <div className="flex flex-col gap-2">
-          <span className="text-2xl font-bold">Ben Echols</span>
+          <h1 className="text-2xl font-bold">Ben Echols</h1>
           <span className="text-xl">
             Trying to leave it better than I found it.
           </span>
         </div>
         <div className="flex flex-col gap-4">
-          <Link to="/about" className="w-full">
-            <Button variant="outline" className="w-full min-h-[3.5rem] px-6">
-              <div className="flex justify-between items-center w-full gap-4">
-                <span className="text-left">
-                  Experience and how I like to work
-                </span>
-                <Lightbulb className="h-6 w-6 flex-shrink-0" />
-              </div>
-            </Button>
+          <Link
+            to="/about"
+            className={buttonVariants({
+              variant: "outline",
+              className: "w-full min-h-[3.5rem] px-6",
+            })}
+          >
+            <span className="flex justify-between items-center w-full gap-4">
+              <span className="text-left">
+                Experience and how I like to work
+              </span>
+              <Lightbulb aria-hidden="true" className="h-6 w-6 flex-shrink-0" />
+            </span>
           </Link>
-          <Link to="/books" className="w-full">
-            <Button variant="outline" className="w-full min-h-[3.5rem] px-6">
-              <div className="flex justify-between items-center w-full gap-4">
-                <span className="text-left">What I&apos;m reading lately</span>
-                <LibraryBig className="h-6 w-6 flex-shrink-0" />
-              </div>
-            </Button>
+          <Link
+            to="/books"
+            className={buttonVariants({
+              variant: "outline",
+              className: "w-full min-h-[3.5rem] px-6",
+            })}
+          >
+            <span className="flex justify-between items-center w-full gap-4">
+              <span className="text-left">What I&apos;m reading lately</span>
+              <LibraryBig
+                aria-hidden="true"
+                className="h-6 w-6 flex-shrink-0"
+              />
+            </span>
           </Link>
-          <Link to="/interesting" className="w-full">
-            <Button variant="outline" className="w-full min-h-[3.5rem] px-6">
-              <div className="flex justify-between items-center w-full gap-4">
-                <span className="text-left">Some interesting stuff</span>
-                <Rocket className="h-6 w-6 flex-shrink-0" />
-              </div>
-            </Button>
+          <Link
+            to="/interesting"
+            className={buttonVariants({
+              variant: "outline",
+              className: "w-full min-h-[3.5rem] px-6",
+            })}
+          >
+            <span className="flex justify-between items-center w-full gap-4">
+              <span className="text-left">Some interesting stuff</span>
+              <Rocket aria-hidden="true" className="h-6 w-6 flex-shrink-0" />
+            </span>
           </Link>
         </div>
       </div>

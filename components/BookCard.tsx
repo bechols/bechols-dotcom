@@ -7,7 +7,10 @@ import {
 import type { BookInfo } from "@/src/types/book-types";
 import { Star } from "lucide-react";
 
-export function BookCard(bookInfo: BookInfo) {
+export function BookCard({
+  loading = "lazy",
+  ...bookInfo
+}: BookInfo & { loading?: "eager" | "lazy" }) {
   return (
     <a
       href={bookInfo.link}
@@ -21,6 +24,7 @@ export function BookCard(bookInfo: BookInfo) {
             <div className="shrink-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4 sm:p-6">
               <img
                 src={bookInfo.imageURL}
+                loading={loading}
                 alt={`Cover of ${bookInfo.title}`}
                 width={120}
                 height={180}
@@ -56,12 +60,13 @@ export function BookCard(bookInfo: BookInfo) {
 
               {/* Rating and Review section - positioned at bottom */}
               <div className="mt-auto space-y-3">
-                {bookInfo.rating && bookInfo.rating != 0 && (
+                {bookInfo.rating != null && bookInfo.rating > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">
                       My rating:
                     </span>
-                    <div className="flex items-center gap-1">
+                    <span className="sr-only">{bookInfo.rating} out of 5</span>
+                    <div className="flex items-center gap-1" aria-hidden="true">
                       {Array.from({ length: 5 }, (_, i) => (
                         <Star
                           key={i}

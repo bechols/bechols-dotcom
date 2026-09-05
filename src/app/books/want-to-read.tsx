@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/page-head";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, SortAsc, SortDesc, Filter } from "lucide-react";
@@ -12,6 +13,12 @@ import {
 import { wantToReadQueryOptions } from "@/lib/book-queries";
 
 export const Route = createFileRoute("/books/want-to-read")({
+  head: () =>
+    pageHead(
+      "/books/want-to-read",
+      "Want to Read | Ben Echols",
+      "Browse and search the books on Ben Echols’s want-to-read list.",
+    ),
   component: WantToRead,
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(wantToReadQueryOptions());

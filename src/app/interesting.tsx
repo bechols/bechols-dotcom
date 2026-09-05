@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/page-head";
 import {
   Card,
   CardContent,
@@ -159,6 +160,12 @@ I hope the umbrella example helps to show what I mean by 'thingify'.  The sign i
 ];
 
 export const Route = createFileRoute("/interesting")({
+  head: () =>
+    pageHead(
+      "/interesting",
+      "Interesting Stuff | Ben Echols",
+      "A collection of articles and ideas Ben Echols finds interesting.",
+    ),
   component: Interesting,
 });
 
