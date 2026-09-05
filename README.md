@@ -126,6 +126,26 @@ To learn more about the technologies used:
 
 Deployed on Vercel
 
+## Agent-readable pages
+
+Public pages support `Accept: text/markdown` as well as HTML. The server converts
+the rendered page content, honors Accept quality values, and sets `Vary: Accept`
+on both variants. The minimal homepage adds supplemental context from
+`lib/site-overview.ts` only to its Markdown representation; it is also described
+in `public/llms.txt`. No user-agent detection or hidden page text is used.
+Unsupported formats return 406;
+missing pages retain 404 with links to the sitemap and site guide.
+
+`public/llms.txt` describes when to use the site, and `public/robots.txt` points
+to `public/sitemap.xml`. Update the sitemap and guide when adding or removing
+public pages. Update `lastmod` only when a page changes; the live reading lists
+omit dates rather than reporting a stale or invented modification time.
+
+With the development server running, run `npm run test:site`. To check a local
+production build, run `npm run build`, start it with
+`PORT=3001 node .output/server/index.mjs`, then run
+`SITE_TEST_URL=http://127.0.0.1:3001 npm run test:site`.
+
 ## Migration Notes
 
 This project was migrated from Next.js to TanStack Start, maintaining all functionality while upgrading to:

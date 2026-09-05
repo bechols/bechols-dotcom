@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Nav from "@/components/Nav";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { createPersistentQueryClient } from "@/lib/query-client";
@@ -45,7 +45,7 @@ function NotFound() {
     <div className="container mx-auto py-8 max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle className="text-center text-6xl mb-4">404</CardTitle>
+          <h1 className="text-center text-6xl font-semibold mb-4">404</h1>
           <p className="text-center text-xl text-muted-foreground">
             Page not found
           </p>
@@ -59,6 +59,10 @@ function NotFound() {
               <Link to="/">Go Home</Link>
             </Button>
           </div>
+          <p>
+            Find a page in the <a href="/sitemap.xml" className="underline">sitemap</a>,
+            or read the <a href="/llms.txt" className="underline">site guide for agents</a>.
+          </p>
         </CardContent>
       </Card>
     </div>

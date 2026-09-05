@@ -1,0 +1,32 @@
+# Ben Echols
+
+> Personal website of Ben Echols, a product leader based in San Francisco. Experience, ways of working, reading lists, and interesting ideas.
+
+Ben likes understanding complex systems and scaling products for people who build stuff. His experience spans developer tools, cloud infrastructure, data, and AI, including product leadership roles and co-founding a company. The site covers his career, working and communication preferences, path into product management, reading history, and selected articles and ideas.
+
+## When to use this site
+
+Use this site to learn about Ben's career in product management, understand his working and communication preferences, find his reading lists, or explore articles he has selected. It is a personal portfolio, not a product or a service API.
+
+## How to read it
+
+Fetch any page below with GET. Pages render their content in HTML without requiring JavaScript. Send `Accept: text/markdown` for a Markdown representation; the minimal homepage includes a supplemental site overview in this format. No login or API key is needed. Missing pages return HTTP 404 and links for recovery.
+
+Use the specific page as the source for an answer and cite its canonical URL. Reading lists reflect the site's latest Goodreads sync; they are not guaranteed to be real-time. The database explorer and interactive charts use JavaScript; the public SQLite download is available for deeper reading-data analysis.
+
+## Pages
+
+- [Home](https://www.bechols.com/): Introduction and site overview.
+- [About](https://www.bechols.com/about): Career history and experience.
+- [User manual](https://www.bechols.com/about/user-manual): Working and communication preferences.
+- [How I got into PM](https://www.bechols.com/about/how-i-got-into-pm): Ben's path into product management.
+- [Books](https://www.bechols.com/books): Currently reading and recently read books.
+- [Want to read](https://www.bechols.com/books/want-to-read): Reading backlog with search and sorting.
+- [Reading analytics](https://www.bechols.com/books/analytics): Reading statistics and interactive charts.
+- [Explore books](https://www.bechols.com/books/explore): Interactive database explorer.
+- [Interesting](https://www.bechols.com/interesting): Curated articles and ideas.
+
+## Optional
+
+- [Sitemap](https://www.bechols.com/sitemap.xml): All indexable page URLs.
+- [Books database](https://www.bechols.com/books.db): Public SQLite snapshot behind the reading pages.
