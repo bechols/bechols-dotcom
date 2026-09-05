@@ -1,4 +1,5 @@
 import { pageHead } from "@/lib/page-head";
+import { BookDataError, BookRefreshError } from "@/components/BookDataError";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import {
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/books/")({
       "Reading List | Ben Echols",
       "Books Ben Echols is currently reading and has recently read, with ratings and reviews.",
     ),
+  errorComponent: BookDataError,
   component: Books,
   loader: async ({ context }) => {
     await Promise.all([
@@ -30,13 +32,22 @@ export const Route = createFileRoute("/books/")({
 });
 
 function Books() {
-  const { data: currentBooks } = useSuspenseQuery(currentBooksQueryOptions());
+  const {
+    data: currentBooks,
+    isError: currentError,
+    refetch: refetchCurrent,
+    isFetching: fetchingCurrent,
+  } = useSuspenseQuery(currentBooksQueryOptions());
 
   const {
     data: recentBooksData,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isError: recentError,
+    isFetchNextPageError,
+    refetch: refetchRecent,
+    isFetching: fetchingRecent,
   } = useSuspenseInfiniteQuery(recentBooksQueryOptions());
 
   const recentBooks =
@@ -49,7 +60,12 @@ function Books() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (
+          entries[0].isIntersecting &&
+          hasNextPage &&
+          !isFetchingNextPage &&
+          !recentError
+        ) {
           void fetchNextPage();
         }
       },
@@ -58,10 +74,16 @@ function Books() {
 
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, recentError]);
 
   return (
     <div className="space-y-6">
+      {currentError && (
+        <BookRefreshError
+          retry={() => void refetchCurrent()}
+          pending={fetchingCurrent}
+        />
+      )}
       <div>
         <h2 className="text-xl md:text-2xl font-semibold mb-4">
           Currently reading
@@ -76,7 +98,7 @@ function Books() {
           ))}
         </div>
         {currentBooks.length === 0 && (
-          <div className="text-lg">{`Maybe I'm not reading anything right now, or maybe the Goodreads API finally stopped working.`}</div>
+          <div className="text-lg">{`I’m not reading anything right now.`}</div>
         )}
       </div>
 
@@ -101,8 +123,17 @@ function Books() {
         </div>
       )}
 
+      {recentError && (
+        <BookRefreshError
+          retry={() =>
+            void (isFetchNextPageError ? fetchNextPage() : refetchRecent())
+          }
+          pending={fetchingRecent}
+        />
+      )}
+
       {/* Loading and infinite scroll trigger */}
-      {hasNextPage && (
+      {hasNextPage && !recentError && (
         <div ref={loadMoreRef} className="flex justify-center py-8">
           {isFetchingNextPage ? (
             <div className="text-lg">Loading more books...</div>

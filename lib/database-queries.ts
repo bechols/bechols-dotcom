@@ -12,12 +12,6 @@ export interface GenreAnalytics {
 export async function getCurrentlyReadingFromDB(): Promise<BookWithReview[]> {
   try {
     const db = await getDatabase();
-    if (!db) {
-      console.warn(
-        "Database not available, returning empty currently reading list",
-      );
-      return [];
-    }
 
     const stmt = db.prepare(`
       SELECT 
@@ -42,7 +36,7 @@ export async function getCurrentlyReadingFromDB(): Promise<BookWithReview[]> {
       "Error fetching currently reading books from database:",
       error,
     );
-    return [];
+    throw error;
   }
 }
 
@@ -51,12 +45,6 @@ export async function getRecentlyReadFromDB(
 ): Promise<BookWithReview[]> {
   try {
     const db = await getDatabase();
-    if (!db) {
-      console.warn(
-        "Database not available, returning empty recently read list",
-      );
-      return [];
-    }
 
     const stmt = db.prepare(`
       SELECT 
@@ -79,7 +67,7 @@ export async function getRecentlyReadFromDB(
     return stmt.all(limit) as BookWithReview[];
   } catch (error) {
     console.error("Error fetching recently read books from database:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -89,12 +77,6 @@ export async function getRecentlyReadPaginatedFromDB(
 ): Promise<{ books: BookWithReview[]; hasMore: boolean }> {
   try {
     const db = await getDatabase();
-    if (!db) {
-      console.warn(
-        "Database not available, returning empty recently read list",
-      );
-      return { books: [], hasMore: false };
-    }
 
     // Ensure parameters are integers
     const safeLimit = Math.max(1, Math.floor(Number(limit)));
@@ -131,17 +113,13 @@ export async function getRecentlyReadPaginatedFromDB(
       "Error fetching paginated recently read books from database:",
       error,
     );
-    return { books: [], hasMore: false };
+    throw error;
   }
 }
 
 export async function getWantToReadFromDB(): Promise<BookWithReview[]> {
   try {
     const db = await getDatabase();
-    if (!db) {
-      console.warn("Database not available, returning empty want to read list");
-      return [];
-    }
 
     const stmt = db.prepare(`
       SELECT
@@ -164,7 +142,7 @@ export async function getWantToReadFromDB(): Promise<BookWithReview[]> {
     return attachGenresToBooks(db, books);
   } catch (error) {
     console.error("Error fetching want to read books from database:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -177,10 +155,6 @@ export async function getWantToReadPaginatedFromDB(
 ): Promise<{ books: BookWithReview[]; hasMore: boolean }> {
   try {
     const db = await getDatabase();
-    if (!db) {
-      console.warn("Database not available, returning empty want to read list");
-      return { books: [], hasMore: false };
-    }
 
     // Ensure parameters are integers
     const safeLimit = Math.max(1, Math.floor(Number(limit)));
@@ -243,15 +217,15 @@ export async function getWantToReadPaginatedFromDB(
       "Error fetching paginated want to read books from database:",
       error,
     );
-    return { books: [], hasMore: false };
+    throw error;
   }
 }
 
 // Attach genres from book_genres table to an array of books
-function attachGenresToBooks(
+function attachGenresToBooks<T extends { goodreads_id: string }>(
   db: import("better-sqlite3").Database,
-  books: BookWithReview[],
-): BookWithReview[] {
+  books: T[],
+): (T & { genres?: string[] })[] {
   if (books.length === 0) return books;
 
   try {
@@ -282,9 +256,15 @@ function attachGenresToBooks(
       ...book,
       genres: genreMap.get(book.goodreads_id) ?? [],
     }));
-  } catch {
-    // book_genres table might not exist yet
-    return books;
+  } catch (error) {
+    // Older snapshots may legitimately predate genre enrichment.
+    if (
+      error instanceof Error &&
+      error.message === "no such table: book_genres"
+    ) {
+      return books;
+    }
+    throw error;
   }
 }
 
@@ -319,7 +299,6 @@ function findParentCategory(genre: string): string | null {
 export async function getGenreAnalyticsFromDB(): Promise<GenreAnalytics[]> {
   try {
     const db = await getDatabase();
-    if (!db) return [];
 
     // Fetch all read books with genres and ratings
     const stmt = db.prepare(`
@@ -376,7 +355,7 @@ export async function getGenreAnalyticsFromDB(): Promise<GenreAnalytics[]> {
         const variance =
           stats.ratings.reduce(
             (sum, rating) => sum + Math.pow(rating - avgRating, 2),
-            0
+            0,
           ) / stats.books;
         const stdDev = Math.sqrt(variance);
 
@@ -390,6 +369,6 @@ export async function getGenreAnalyticsFromDB(): Promise<GenreAnalytics[]> {
       .filter((g) => g.books >= 5); // Show only categories with 5+ books to reduce noise
   } catch (error) {
     console.error("Error fetching genre analytics:", error);
-    return [];
+    throw error;
   }
 }

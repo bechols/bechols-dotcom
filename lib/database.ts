@@ -1,5 +1,7 @@
 import Database from "better-sqlite3";
-import { resolve } from "path";
+import { resolve, join } from "node:path";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 export type Book = {
   id: number;
@@ -42,69 +44,109 @@ export type BookWithReview = Book & {
 };
 
 let db: Database.Database | null = null;
+let writableDb: Database.Database | null = null;
+let initialization: Promise<Database.Database> | null = null;
+let temporaryDirectory: string | null = null;
+let generation = 0;
 
-export async function getDatabase(): Promise<Database.Database | null> {
-  // Always try to create a fresh database for now to debug
-  // if (!db) {
+function openReadOnly(path: string): Database.Database {
+  const connection = new Database(path, {
+    readonly: true,
+    fileMustExist: true,
+  });
   try {
-    // Try local file first (for development)
-    const dbPath = resolve(process.cwd(), "public", "books.db");
-    console.log("Attempting to load database from:", dbPath);
-    db = new Database(dbPath);
-    db.pragma("journal_mode = WAL");
-    db.pragma("foreign_keys = ON");
-    console.log("✅ Database loaded from local file");
+    // Force SQLite to read the schema before publishing the connection.
+    connection.prepare("SELECT name FROM sqlite_master LIMIT 1").all();
+    connection.pragma("foreign_keys = ON");
+    return connection;
   } catch (error) {
-    console.log("Local file failed:", error.message);
+    connection.close();
+    throw error;
+  }
+}
+
+async function initializeReader(): Promise<Database.Database> {
+  try {
+    return openReadOnly(resolve(process.cwd(), "public", "books.db"));
+  } catch (error) {
+    console.warn(
+      "Local books database unavailable; trying deployment copy:",
+      error,
+    );
+  }
+
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://bechols.com";
+  const response = await fetch(`${baseUrl}/books.db`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `Unable to load books database (${response.status}). Please retry.`,
+    );
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  // Each process/attempt owns a unique file. Never replace an open SQLite file.
+  const directory = mkdtempSync(join(tmpdir(), "bechols-books-"));
+  try {
+    const path = join(directory, "books.db");
+    writeFileSync(path, buffer, { flag: "wx" });
+    const connection = openReadOnly(path);
+    temporaryDirectory = directory;
+    return connection;
+  } catch (error) {
+    rmSync(directory, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+export function getDatabase(): Promise<Database.Database> {
+  if (db?.open) return Promise.resolve(db);
+  if (!initialization) {
+    const currentGeneration = generation;
+    const pending = initializeReader()
+      .then((connection) => {
+        if (currentGeneration !== generation) {
+          connection.close();
+          if (temporaryDirectory) {
+            rmSync(temporaryDirectory, { recursive: true, force: true });
+            temporaryDirectory = null;
+          }
+          throw new Error("Database initialization was closed. Please retry.");
+        }
+        db = connection;
+        return connection;
+      })
+      .finally(() => {
+        if (initialization === pending) initialization = null;
+      });
+    initialization = pending;
+  }
+  return initialization;
+}
+
+// Maintenance helpers deliberately write only to the local source database.
+// They must never update a downloaded deployment snapshot.
+export function getWritableDatabase(): Promise<Database.Database> {
+  if (!writableDb?.open) {
+    const connection = new Database(
+      resolve(process.cwd(), "public", "books.db"),
+    );
     try {
-      // Fallback: fetch from public URL (for Vercel)
-      console.log("Local database not found, fetching from public URL...");
-
-      // Fetch from the same deployment's public directory
-      const baseUrl = process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : "https://bechols.com";
-      const response = await fetch(`${baseUrl}/books.db`);
-      console.log(
-        "Fetch response status:",
-        response.status,
-        response.statusText,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch database: ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const dbBuffer = await response.arrayBuffer();
-      console.log("Database buffer size:", dbBuffer.byteLength);
-
-      // Write buffer to temporary file for SQLite to open
-      const tmpPath = "/tmp/books.db";
-      const fs = await import("fs");
-      fs.writeFileSync(tmpPath, Buffer.from(dbBuffer));
-
-      db = new Database(tmpPath);
-      db.pragma("journal_mode = WAL");
-      db.pragma("foreign_keys = ON");
-      console.log("✅ Database loaded from public URL");
-    } catch (fetchError) {
-      console.error("Database not available via file or URL:", fetchError);
-      return null;
+      connection.pragma("journal_mode = WAL");
+      connection.pragma("foreign_keys = ON");
+      writableDb = connection;
+    } catch (error) {
+      connection.close();
+      throw error;
     }
   }
-  // }
-  return db;
+  return Promise.resolve(writableDb);
 }
 
 export async function initDatabase(): Promise<void> {
-  const database = await getDatabase();
-
-  if (!database) {
-    console.warn("Database not available, skipping initialization");
-    return;
-  }
+  const database = await getWritableDatabase();
 
   // Create books table
   database.exec(`
@@ -155,12 +197,7 @@ export async function initDatabase(): Promise<void> {
 export async function insertBook(
   book: Omit<Book, "id" | "created_at">,
 ): Promise<number> {
-  const database = await getDatabase();
-
-  if (!database) {
-    console.warn("Database not available, cannot insert book");
-    return -1;
-  }
+  const database = await getWritableDatabase();
 
   const stmt = database.prepare(`
     INSERT OR REPLACE INTO books (goodreads_id, title, author, isbn, image_url, description, pages, publication_year)
@@ -184,12 +221,7 @@ export async function insertBook(
 export async function insertReview(
   review: Omit<Review, "id" | "created_at">,
 ): Promise<number> {
-  const database = await getDatabase();
-
-  if (!database) {
-    console.warn("Database not available, cannot insert review");
-    return -1;
-  }
+  const database = await getWritableDatabase();
 
   const stmt = database.prepare(`
     INSERT OR REPLACE INTO reviews (book_id, shelf, rating, review, date_added, date_read, date_started, read_count, owned)
@@ -216,24 +248,14 @@ export async function getBookByGoodreadsId(
 ): Promise<Book | null> {
   const database = await getDatabase();
 
-  if (!database) {
-    console.warn("Database not available, cannot get book by Goodreads ID");
-    return null;
-  }
-
   const stmt = database.prepare("SELECT * FROM books WHERE goodreads_id = ?");
-  return stmt.get(goodreadsId) as Book | null;
+  return (stmt.get(goodreadsId) as Book | undefined) ?? null;
 }
 
 export async function getBooksByShelf(
   shelf: string,
 ): Promise<BookWithReview[]> {
   const database = await getDatabase();
-
-  if (!database) {
-    console.warn("Database not available, cannot get books by shelf");
-    return [];
-  }
 
   const stmt = database.prepare(`
     SELECT 
@@ -264,11 +286,6 @@ export async function getRecentlyRead(
 ): Promise<BookWithReview[]> {
   const database = await getDatabase();
 
-  if (!database) {
-    console.warn("Database not available, cannot get recently read books");
-    return [];
-  }
-
   const stmt = database.prepare(`
     SELECT 
       b.*,
@@ -291,8 +308,15 @@ export async function getRecentlyRead(
 }
 
 export function closeDatabase(): void {
-  if (db) {
-    db.close();
-    db = null;
+  generation++;
+  // Keep an in-flight attempt shared until it settles; its generation check
+  // closes the result and removes its own temporary file.
+  if (db?.open) db.close();
+  db = null;
+  if (writableDb?.open) writableDb.close();
+  writableDb = null;
+  if (temporaryDirectory) {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+    temporaryDirectory = null;
   }
 }

@@ -1,4 +1,5 @@
 import { pageHead } from "@/lib/page-head";
+import { BookDataError, BookRefreshError } from "@/components/BookDataError";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, SortAsc, SortDesc, Filter } from "lucide-react";
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/books/want-to-read")({
       "Want to Read | Ben Echols",
       "Browse and search the books on Ben Echols’s want-to-read list.",
     ),
+  errorComponent: BookDataError,
   component: WantToRead,
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(wantToReadQueryOptions());
@@ -26,7 +28,12 @@ export const Route = createFileRoute("/books/want-to-read")({
 });
 
 function WantToRead() {
-  const { data: allBooks } = useSuspenseQuery(wantToReadQueryOptions());
+  const {
+    data: allBooks,
+    isError,
+    refetch,
+    isFetching,
+  } = useSuspenseQuery(wantToReadQueryOptions());
   const [sortBy, setSortBy] = useState<"title" | "author" | "date_added">(
     "date_added"
   );
@@ -178,6 +185,9 @@ function WantToRead() {
 
   return (
     <div className="flex flex-col gap-4 pb-6">
+      {isError && (
+        <BookRefreshError retry={() => void refetch()} pending={isFetching} />
+      )}
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

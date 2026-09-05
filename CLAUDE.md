@@ -61,8 +61,8 @@ const getData = createServerFn({ method: "GET" })
 - **Schema**: `books` table + `reviews` table (joined by `book_id`) + `book_genres` table, with shelves: `currently-reading`, `read`, `to-read`
 - **Query layer**: `lib/database-queries.ts` — async functions for all book data operations
 - **Connection**: `lib/database.ts` — handles initialization and path resolution
-- **Vercel deployment**: Serverless functions can't read `public/` via filesystem. Three-layer fallback: local file → `VERCEL_URL` preview deployment → `bechols.com` production. Writes to `/tmp/books.db`
-- **Error pattern**: All query functions return empty arrays/data on failure, never throw. This prevents crashes in Vercel serverless where DB fetch might fail
+- **Vercel deployment**: Reuse one read-only connection and a shared initialization promise per module instance. Try `public/books.db`, then download from `VERCEL_URL` (or production when unset) into a unique temporary directory. Failed initialization can retry. `closeDatabase()` closes handles and removes temporary files.
+- **Error pattern**: Database/query failures throw so React Query can retry and retain previously loaded data. Successful empty queries remain empty; do not replace failures with empty lists, zero analytics, or a partial Goodreads shelf. Book routes provide initial-load and refresh retry controls. Maintenance uses `getWritableDatabase()` or the existing standalone scripts, always against local `public/books.db`.
 - **WAL checkpoint**: After modifying `books.db` locally, run `PRAGMA wal_checkpoint(TRUNCATE)` before committing. WAL data is invisible to Vercel serverless without checkpointing
 - **OpenLibrary enrichment**: `scripts/sync-openlibrary.js` enriches books with `openlibrary_edition_key` and `openlibrary_work_key` via the OpenLibrary API (ISBN lookup with search fallback). Run separately after Goodreads sync
 - **Genre enrichment pipeline** (run in order):

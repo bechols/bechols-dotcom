@@ -1,4 +1,5 @@
 import { pageHead } from "@/lib/page-head";
+import { BookDataError, BookRefreshError } from "@/components/BookDataError";
 import {
   Bar,
   BarChart,
@@ -266,35 +267,13 @@ export const Route = createFileRoute("/books/analytics")({
   loader: async ({ context }) => {
     await context.queryClient.prefetchQuery(analyticsQueryOptions());
   },
-  errorComponent: ({ error, reset }) => (
-    <div className="space-y-4">
-      <div className="text-center">
-        <h2 className="text-xl font-semibold text-red-600 mb-2">
-          Analytics Unavailable
-        </h2>
-        <p className="text-muted-foreground mb-4">
-          Unable to load reading analytics. This could be due to database issues
-          or missing data.
-        </p>
-        <button
-          onClick={reset}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Try Again
-        </button>
-      </div>
-      <details className="mt-4">
-        <summary className="cursor-pointer text-sm">Error Details</summary>
-        <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto">
-          {error?.toString()}
-        </pre>
-      </details>
-    </div>
-  ),
+  errorComponent: BookDataError,
 });
 
 function Analytics() {
-  const { data } = useSuspenseQuery(analyticsQueryOptions());
+  const { data, isError, refetch, isFetching } = useSuspenseQuery(
+    analyticsQueryOptions(),
+  );
 
   // Get dynamic year options
   const currentYear = new Date().getFullYear();
@@ -343,6 +322,9 @@ function Analytics() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-8">Reading Analytics</h1>
+      {isError && (
+        <BookRefreshError retry={() => void refetch()} pending={isFetching} />
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
