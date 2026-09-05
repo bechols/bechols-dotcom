@@ -1,10 +1,21 @@
 /* global process, fetch, URL */
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { Parser } from "commonmark";
 
 const origin = process.env.SITE_TEST_URL || "http://127.0.0.1:3000";
 const get = (path, accept = "text/html", method = "GET") =>
   fetch(new URL(path, origin), { headers: { Accept: accept }, method });
+
+function markdownNodes(source, type) {
+  const nodes = [];
+  const walker = new Parser().parse(source).walker();
+  let event;
+  while ((event = walker.next())) {
+    if (event.entering && event.node.type === type) nodes.push(event.node);
+  }
+  return nodes;
+}
 
 test("homepage keeps its minimal server-rendered introduction and Person identity", async () => {
   const response = await get("/");
@@ -90,4 +101,39 @@ test("discovery files and sitemap pages are publicly readable", async () => {
     assert.match(response.headers.get("content-type"), /^text\/markdown/);
     assert.ok((await response.text()).length >= 500, path);
   }
+});
+
+test("card-heavy Markdown exposes usable links and retains card content", async () => {
+  const books = await (await get("/books", "text/markdown")).text();
+  const bookLinks = markdownNodes(books, "link").map((node) => node.destination);
+  const goodreadsLinks = bookLinks.filter((destination) => /goodreads\.com/.test(destination));
+  assert.ok(goodreadsLinks.length >= 20, `Only ${goodreadsLinks.length} Goodreads links parsed`);
+  for (const destination of goodreadsLinks) assert.doesNotThrow(() => new URL(destination));
+  assert.ok(markdownNodes(books, "image").length > 0);
+  assert.match(books, /\bby\b/);
+  assert.match(books, /My (rating|review):/);
+
+  const interesting = await (await get("/interesting", "text/markdown")).text();
+  const interestingLinks = markdownNodes(interesting, "link").map((node) => node.destination);
+  assert.ok(interestingLinks.length >= 10, `Only ${interestingLinks.length} source links parsed`);
+  for (const destination of interestingLinks) assert.doesNotThrow(() => new URL(destination));
+  assert.ok(interestingLinks.includes("https://czep.net/weblog/52cards.html"));
+  assert.ok(interestingLinks.includes("https://arxiv.org/abs/1803.03453"));
+  assert.match(interesting, /This number is beyond astronomically large/);
+  assert.match(interesting, /czep/);
+});
+
+test("book filters have programmatically associated accessible names", async () => {
+  const analytics = await (await get("/books/analytics")).text();
+  for (const [id, name] of [
+    ["reading-interval", "Interval:"],
+    ["reading-start-year", "From:"],
+    ["reading-end-year", "To:"],
+  ]) {
+    assert.match(analytics, new RegExp(`<label[^>]*for="${id}"[^>]*>${name}</label>`));
+    assert.match(analytics, new RegExp(`<select[^>]*id="${id}"`));
+  }
+
+  const wantToRead = await (await get("/books/want-to-read")).text();
+  assert.match(wantToRead, /<select[^>]*aria-label="Filter by genre"/);
 });

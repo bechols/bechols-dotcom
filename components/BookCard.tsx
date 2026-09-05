@@ -5,6 +5,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { BookInfo } from "@/src/types/book-types";
+import { formatCalendarDate } from "@/lib/format-calendar-date";
 import { Star } from "lucide-react";
 
 export function BookCard({
@@ -34,7 +35,10 @@ export function BookCard({
 
             <div className="flex-1 p-4 sm:p-6 flex flex-col">
               <div className="flex-1">
-                <CardTitle className="text-xl md:text-2xl font-bold mb-2 break-words group-hover:text-blue-600 transition-colors">
+                <CardTitle
+                  data-markdown-link-title
+                  className="text-xl md:text-2xl font-bold mb-2 break-words group-hover:text-blue-600 transition-colors"
+                >
                   {bookInfo.title}
                 </CardTitle>
                 <CardDescription className="text-base md:text-lg font-medium text-gray-600 mb-3">
@@ -46,13 +50,13 @@ export function BookCard({
                   {bookInfo.dateStarted && (
                     <div className="text-xs text-gray-500">
                       Started:{" "}
-                      {new Date(bookInfo.dateStarted).toLocaleDateString()}
+                      {formatCalendarDate(bookInfo.dateStarted)}
                     </div>
                   )}
                   {bookInfo.dateRead && (
                     <div className="text-xs text-gray-500">
                       Finished:{" "}
-                      {new Date(bookInfo.dateRead).toLocaleDateString()}
+                      {formatCalendarDate(bookInfo.dateRead)}
                     </div>
                   )}
                 </div>

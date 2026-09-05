@@ -214,7 +214,7 @@ function Interesting() {
             key={entry.title}
           >
             <Card className="p-4 hover:bg-slate-200 mb-6">
-              <CardTitle>{entry.title}</CardTitle>
+              <CardTitle data-markdown-link-title>{entry.title}</CardTitle>
               <CardDescription className="pt-2">
                 {entry.sourceName}
               </CardDescription>

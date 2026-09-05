@@ -357,8 +357,9 @@ function Analytics() {
               <CardTitle>Books Finished Over Time</CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">Interval:</label>
+                  <label htmlFor="reading-interval" className="text-sm font-medium">Interval:</label>
                   <select
+                    id="reading-interval"
                     value={timeInterval}
                     onChange={(e) =>
                       setTimeInterval(
@@ -373,8 +374,9 @@ function Analytics() {
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">From:</label>
+                  <label htmlFor="reading-start-year" className="text-sm font-medium">From:</label>
                   <select
+                    id="reading-start-year"
                     value={startYear}
                     onChange={(e) => setStartYear(e.target.value)}
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -390,8 +392,9 @@ function Analytics() {
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium">To:</label>
+                  <label htmlFor="reading-end-year" className="text-sm font-medium">To:</label>
                   <select
+                    id="reading-end-year"
                     value={endYear}
                     onChange={(e) => setEndYear(e.target.value)}
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

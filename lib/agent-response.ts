@@ -2,15 +2,35 @@ import Negotiator from "negotiator";
 import TurndownService from "turndown";
 import { siteOverview } from "./site-overview";
 
-const markdown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
-markdown.remove((node) => ["script", "style", "head", "nav", "footer", "button", "svg"].includes(node.nodeName.toLowerCase()));
-markdown.addRule("embeddedContent", {
-  filter: "iframe",
-  replacement: (_content, node) => {
-    const frame = node as HTMLIFrameElement;
-    return `\n\n[${frame.getAttribute("title") ?? "Embedded content"}](${frame.getAttribute("src") ?? ""})\n\n`;
-  },
-});
+function createMarkdownService() {
+  const service = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
+  service.remove((node) => ["script", "style", "head", "nav", "footer", "button", "svg"].includes(node.nodeName.toLowerCase()));
+  service.addRule("embeddedContent", {
+    filter: "iframe",
+    replacement: (_content, node) => {
+      const frame = node as HTMLIFrameElement;
+      return `\n\n[${frame.getAttribute("title") ?? "Embedded content"}](${frame.getAttribute("src") ?? ""})\n\n`;
+    },
+  });
+  service.addRule("linkedCard", {
+    filter: (node) =>
+      node.nodeName === "A" &&
+      Boolean(node.querySelector("[data-markdown-link-title]")),
+    replacement: (_content, node) => {
+      const anchor = node as HTMLAnchorElement;
+      const clone = anchor.cloneNode(true) as HTMLAnchorElement;
+      const title = clone.querySelector("[data-markdown-link-title]");
+      const titleText = title?.textContent?.trim();
+      const label = service.escape(titleText ?? anchor.href);
+      title?.remove();
+      const details = service.turndown(clone.innerHTML).trim();
+      return `\n\n[${label}](<${anchor.href}>)${details ? `\n\n${details}` : ""}\n\n`;
+    },
+  });
+  return service;
+}
+
+const markdown = createMarkdownService();
 
 export async function servePage(
   request: Request,

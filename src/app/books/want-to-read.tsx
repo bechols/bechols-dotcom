@@ -204,6 +204,7 @@ function WantToRead() {
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <select
+              aria-label="Filter by genre"
               value={selectedGenre}
               onChange={(e) => setSelectedGenre(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-williams-purple focus:border-transparent"
